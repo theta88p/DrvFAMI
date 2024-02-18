@@ -1,0 +1,2 @@
+[Assemble] : drv.s
+[Link] : test.nes
