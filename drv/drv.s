@@ -471,6 +471,14 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		lda Frags, x
 		and #FRAG_SIL		;現在のトラックが無音の場合、後のトラックの発音処理をする
 		bne exec
+		lda Device, x
+		inx
+		cmp Device, x
+		bne iend
+		lda Frags, x
+		ora #FRAG_WRITE_DIS	;無音でない場合は、後のトラックを書き込み無効に
+		sta Frags, x
+		dex
 		dex
 		bmi end		;xがマイナスになったら全トラック終了
 		jmp start
@@ -586,15 +594,19 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 
 .proc writereg_end
 		lda Frags, x
-		ora #FRAG_LOAD			;ロードフラグを立てる
-		;キーオン・キーオフ・書き込み無効フラグを降ろす
-		and #FRAG_KEYON_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
-		sta Frags, x
+		and #FRAG_WRITE_DIS	;書き込み無効フラグが立っていた場合
+		bne frag
 		ldy Device, x		;周波数の保存
 		lda Freq_L, x
 		sta PrevFreq_L, y
 		lda Freq_H, x
 		sta PrevFreq_H, y
+	frag:
+		lda Frags, x
+		ora #FRAG_LOAD			;ロードフラグを立てる
+		;キーオン・キーオフ・書き込み無効フラグを降ろす
+		and #FRAG_KEYON_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
+		sta Frags, x
 		dex
 		bmi end
 		jmp writereg
