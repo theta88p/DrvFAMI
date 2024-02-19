@@ -1,8 +1,5 @@
 DrvFAMI説明書
 
-ソースコード
-https://github.com/theta88p/DrvFAMI
-
 Music番号 {} の中に Trackを定義していきます。
 いちばん数値の小さいMusicから再生されます。
 Trackの引数はトラック番号,音源番号です。
