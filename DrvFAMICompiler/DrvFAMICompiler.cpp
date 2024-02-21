@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 #include "MMLReader.h"
 #include "FileWriter.h"
 

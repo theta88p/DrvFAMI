@@ -1,22 +1,22 @@
 DrvFAMI - Famicom/NES Sound Driver & Compiler
 Copylight(c) 2024 theta
 
-�E�\�[�X�R�[�h
+・ソースコード
   https://github.com/theta88p/DrvFAMI
 
-�E����
+・著者
   theta
   https://ss1.xrea.com/theta.s57.xrea.com/
   https://twitter.com/theta88p
 
 
-�E�X�V����
+・更新履歴
   v0.1.0         2024/02/19
-    Q�R�}���h�̉����v�Z��n/8�̌v�Z���@��ς���
-    �������[�v�Ŗ߂��Ă��Ȃ��Ȃ�s��̏C��
-    ���F�ύX�ŉ��F�G���x���[�v����������悤�ɂ���
-    ���荞�ݏ����Ńm�[�g�I�����A�ł���Ă��܂��s��̏C��
-    �\�[�X��������߂�GitHub�ɒu���悤�ɂ���
+    Qコマンドの音長計算でn/8の計算方法を変えた
+    無限ループで戻ってこなくなる不具合の修正
+    音色変更で音色エンベロープを解除するようにした
+    割り込み処理でノートオンが連打されてしまう不具合の修正
+    ソース同梱をやめてGitHubに置くようにした
 
   v0.0.1         2024/02/17
-    ���J
+    公開

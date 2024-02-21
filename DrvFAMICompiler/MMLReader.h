@@ -108,7 +108,7 @@ public:
 	std::string title;
 	std::string artist;
 	std::string copyright;
-	std::vector<int> musiclist;			//‹È”Ô†‚Æn‹È–Ú‚Ì‘Î‰ƒŠƒXƒgBŒÄ‚Ño‚µ‚É‹tˆø‚«‚·‚éB
+	std::vector<int> musiclist;			//æ›²ç•ªå·ã¨næ›²ç›®ã®å¯¾å¿œãƒªã‚¹ãƒˆã€‚å‘¼ã³å‡ºã—æ™‚ã«é€†å¼•ãã™ã‚‹ã€‚
 	std::map<int, DpcmInfo> dpcmlist;
 	std::vector<unsigned char> seqdata;
 	int dpcmoffset;

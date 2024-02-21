@@ -145,8 +145,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Command.cpp" />
-    <ClCompile Include="DpcmInfo.cpp" />
     <ClCompile Include="DrvFAMICompiler.cpp" />
     <ClCompile Include="FileWriter.cpp" />
     <ClCompile Include="MMLReader.cpp" />

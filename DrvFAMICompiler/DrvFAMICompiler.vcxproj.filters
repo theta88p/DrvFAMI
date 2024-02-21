@@ -24,12 +24,6 @@
     <ClCompile Include="Utils.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="DpcmInfo.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Command.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="NoteMap.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
