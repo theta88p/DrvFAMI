@@ -1,9 +1,9 @@
 #include "MMLReader.h"
 
-//ƒm[ƒgƒe[ƒuƒ‹iƒm[ƒg•¶š‚Æ‰¹ŠK‚ÌŠÖŒWj
+//ãƒãƒ¼ãƒˆãƒ†ãƒ¼ãƒ–ãƒ«ï¼ˆãƒãƒ¼ãƒˆæ–‡å­—ã¨éŸ³éšã®é–¢ä¿‚ï¼‰
                       /* a b  c d e f g */
 const unsigned char notetbl[] = { 9, 11, 0, 2, 4, 5, 7 };
-//‰¹’·ƒe[ƒuƒ‹i‰¹’·”Ô†‚Æ192/n‰¹•„‚ÌŠÖŒWj
+//éŸ³é•·ãƒ†ãƒ¼ãƒ–ãƒ«ï¼ˆéŸ³é•·ç•ªå·ã¨192/néŸ³ç¬¦ã®é–¢ä¿‚ï¼‰
 /* 1 2 3 4 6 8 12 16 24 32 48 64 */
 const unsigned char nthnotetbl[] = { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96 };
 
@@ -72,7 +72,7 @@ void MMLReader::readMML()
     ss.clear();
     ss << ss2.rdbuf();
 
-    while (!ss.eof())      //Å‰‚É‹È”‚¾‚¯æ“¾‚µ‚Ä‚¨‚­Bƒwƒbƒ_ƒTƒCƒY‚ªŒˆ‚Ü‚ç‚È‚¢‚ÆƒGƒ“ƒxƒ[ƒvƒAƒhƒŒƒX‚ªæ“¾‚Å‚«‚È‚¢‚½‚ßB
+    while (!ss.eof())      //æœ€åˆã«æ›²æ•°ã ã‘å–å¾—ã—ã¦ãŠãã€‚ãƒ˜ãƒƒãƒ€ã‚µã‚¤ã‚ºãŒæ±ºã¾ã‚‰ãªã„ã¨ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ã‚¢ãƒ‰ãƒ¬ã‚¹ãŒå–å¾—ã§ããªã„ãŸã‚ã€‚
     {
         if (findStr("music"))
         {
@@ -93,20 +93,20 @@ void MMLReader::readMML()
 
     linenum = 1;
 
-    //‹È” * ‹ÈƒAƒhƒŒƒX2byte
+    //æ›²æ•° * æ›²ã‚¢ãƒ‰ãƒ¬ã‚¹2byte
     int musichead = music * 2;
     totalpos = musichead;
 
     linenum = 1;
     ss.clear();
-    ss.seekg(0);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+    ss.seekg(0);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
 
     makeLengthTbl(lengthtbl);
     readDifinitions();
 
     linenum = 1;
     ss.clear();
-    ss.seekg(0);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+    ss.seekg(0);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
     
     int envsize = 0;
     readEnvelope(envsize);
@@ -119,7 +119,7 @@ void MMLReader::readMML()
 
     linenum = 1;
     ss.clear();
-    ss.seekg(0);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+    ss.seekg(0);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
 
     int subsize = 0;
     readSubRoutine(subsize);
@@ -132,7 +132,7 @@ void MMLReader::readMML()
 
     linenum = 1;
     ss.clear();
-    ss.seekg(0);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+    ss.seekg(0);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
 
     for (int i = 0; i < music; i++)
     {
@@ -147,7 +147,7 @@ void MMLReader::readMML()
                 int curline = linenum;
                 int track = 0;
 
-                while (!ss.eof())                  //ƒgƒ‰ƒbƒN”‚ğæ“¾
+                while (!ss.eof())                  //ãƒˆãƒ©ãƒƒã‚¯æ•°ã‚’å–å¾—
                 {
                     if (findStr("track", "}"))
                     {
@@ -159,11 +159,17 @@ void MMLReader::readMML()
                     }
                 }
 
+                if (track == 0)
+                {
+                    std::cerr << "No track." << std::endl;
+                    exit(1);
+                }
+
                 linenum = curline;
                 ss.clear();
-                ss.seekg(seek);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+                ss.seekg(seek);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
 
-                //ƒgƒ‰ƒbƒN” x 4byteiƒgƒ‰ƒbƒN‚ÌƒAƒhƒŒƒX‚Æƒgƒ‰ƒbƒN”Ô†‚Æ‰¹Œ¹”Ô†j + ƒgƒ‰ƒbƒNƒwƒbƒ_‚ÌI’[ƒR[ƒh + ƒfƒtƒH‰¹’·ƒf[ƒ^
+                //ãƒˆãƒ©ãƒƒã‚¯æ•° x 4byteï¼ˆãƒˆãƒ©ãƒƒã‚¯ã®ã‚¢ãƒ‰ãƒ¬ã‚¹ã¨ãƒˆãƒ©ãƒƒã‚¯ç•ªå·ã¨éŸ³æºç•ªå·ï¼‰ + ãƒˆãƒ©ãƒƒã‚¯ãƒ˜ãƒƒãƒ€ã®çµ‚ç«¯ã‚³ãƒ¼ãƒ‰ + ãƒ‡ãƒ•ã‚©éŸ³é•·ãƒ‡ãƒ¼ã‚¿
                 int trheadsize = track * 4 + 1 + 1;
 
                 readBrackets(ss.tellg(), trheadsize, musdata);
@@ -174,7 +180,7 @@ void MMLReader::readMML()
 
                 linenum = 1;
                 ss.clear();
-                ss.seekg(0);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+                ss.seekg(0);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
             }
         }
     }
@@ -271,7 +277,7 @@ void MMLReader::readDifinitions()
         }
         else if (c == '@')
         {
-            if (isNextStr("dpcm"))   //DPCMƒŠƒXƒg
+            if (isNextStr("dpcm"))   //DPCMãƒªã‚¹ãƒˆ
             {
                 int tb;
                 skipSpace();
@@ -360,9 +366,9 @@ void MMLReader::readDifinitions()
                     exit(1);
                 }
             }
-            else if (isNextChar('m'))   //ƒ}ƒbƒv’è‹`
+            else if (isNextChar('m'))   //ãƒãƒƒãƒ—å®šç¾©
             {
-                if (!isTrack && !isSub)  //ŠO‚É‚ ‚Á‚½‚ç’è‹`
+                if (!isTrack && !isSub)  //å¤–ã«ã‚ã£ãŸã‚‰å®šç¾©
                 {
                     skipSpace();
                     if (getMultiDigit(n))
@@ -383,7 +389,7 @@ void MMLReader::readDifinitions()
                             skipComment();
                             skipSpace();
 
-                            //‚±‚±‚©‚çƒm[ƒgƒiƒ“ƒo[‚Æ’è‹`ƒŠƒXƒg‚Ì—ñ‹“
+                            //ã“ã“ã‹ã‚‰ãƒãƒ¼ãƒˆãƒŠãƒ³ãƒãƒ¼ã¨å®šç¾©ãƒªã‚¹ãƒˆã®åˆ—æŒ™
                             while (!ss.eof())
                             {
                                 NoteMap map;
@@ -392,7 +398,7 @@ void MMLReader::readDifinitions()
                                 skipSpaceUntilNextLine();
                                 getNoteNumber(map.target);
 
-                                //ƒRƒ}ƒ“ƒh‚Ì—ñ‹“
+                                //ã‚³ãƒãƒ³ãƒ‰ã®åˆ—æŒ™
                                 while (!ss.eof())
                                 {
                                     int convert = 0;
@@ -402,14 +408,14 @@ void MMLReader::readDifinitions()
                                     skipComment();
                                     skipSpaceUntilNextLine();
 
-                                    if (getNoteNumber(convert))   //•ÏŠ·æƒm[ƒgƒiƒ“ƒo[
+                                    if (getNoteNumber(convert))   //å¤‰æ›å…ˆãƒãƒ¼ãƒˆãƒŠãƒ³ãƒãƒ¼
                                     {
                                         map.convert = convert;
                                         cmd = map.target;
                                     }
                                     else if (getc(c))
                                     {
-                                        if (c == '@')   //ƒGƒ“ƒxƒ[ƒv‚©‰¹F‚©ƒf[ƒ^Ä¶
+                                        if (c == '@')   //ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ã‹éŸ³è‰²ã‹ãƒ‡ãƒ¼ã‚¿å†ç”Ÿ
                                         {
                                             skipSpaceUntilNextLine();
                                             getc(c);
@@ -474,46 +480,46 @@ void MMLReader::readDifinitions()
                                                 break;
                                             }
                                         }
-                                        else if (c == 's' || c == 'S')  //ƒ\ƒtƒgƒEƒFƒAƒXƒC[ƒv
+                                        else if (c == 's' || c == 'S')  //ã‚½ãƒ•ãƒˆã‚¦ã‚§ã‚¢ã‚¹ã‚¤ãƒ¼ãƒ—
                                         {
                                             cmd = SW_SWEEP;
                                             getCmdArgs(args);
                                         }
-                                        else if (c == 'q')  //ƒQ[ƒgƒ^ƒCƒ€q
+                                        else if (c == 'q')  //ã‚²ãƒ¼ãƒˆã‚¿ã‚¤ãƒ q
                                         {
                                             cmd = GATE_TIME_Q;
                                             getCmdArgs(args);
                                         }
-                                        else if (c == 'u')  //ƒQ[ƒgƒ^ƒCƒ€u
+                                        else if (c == 'u')  //ã‚²ãƒ¼ãƒˆã‚¿ã‚¤ãƒ u
                                         {
                                             cmd = GATE_TIME_U;
                                             getCmdArgs(args);
                                         }
-                                        else if (c == 'Q')  //ƒQ[ƒgƒ^ƒCƒ€Q
+                                        else if (c == 'Q')  //ã‚²ãƒ¼ãƒˆã‚¿ã‚¤ãƒ Q
                                         {
                                             cmd = GATE_TIME_BIGQ;
                                             getCmdArgs(args);
                                         }
-                                        else if (c == 'K')  //ƒL[ƒVƒtƒgâ‘Îw’è
+                                        else if (c == 'K')  //ã‚­ãƒ¼ã‚·ãƒ•ãƒˆçµ¶å¯¾æŒ‡å®š
                                         {
                                             cmd = KEYSHIFT_ABS;
                                             getCmdArgs(args);
                                         }
-                                        else if (c == 'v' || c == 'V')  //ƒ{ƒŠƒ…[ƒ€
+                                        else if (c == 'v' || c == 'V')  //ãƒœãƒªãƒ¥ãƒ¼ãƒ 
                                         {
                                             cmd = VOLUME_ABS;
                                             getCmdArgs(args);
                                         }
-                                        else if (c == 'r' || c == 'R')  //‹x•„
+                                        else if (c == 'r' || c == 'R')  //ä¼‘ç¬¦
                                         {
                                             cmd = REST_DEFLEN;
                                         }
-                                        else if (c == '\n')    //‰üs‚ÅI—¹
+                                        else if (c == '\n')    //æ”¹è¡Œã§çµ‚äº†
                                         {
                                             linenum++;
                                             break;
                                         }
-                                        else if (c == '}')   //•Â‚¶‚©‚Á‚±‚ª—ˆ‚½‚ç’è‹`I—¹
+                                        else if (c == '}')   //é–‰ã˜ã‹ã£ã“ãŒæ¥ãŸã‚‰å®šç¾©çµ‚äº†
                                         {
                                             break;
                                         }
@@ -532,7 +538,7 @@ void MMLReader::readDifinitions()
                                 skipComment();
                                 skipSpace();
 
-                                if (c == '}' || isNextChar('}'))   //•Â‚¶‚©‚Á‚±‚ª—ˆ‚½‚ç’è‹`I—¹
+                                if (c == '}' || isNextChar('}'))   //é–‰ã˜ã‹ã£ã“ãŒæ¥ãŸã‚‰å®šç¾©çµ‚äº†
                                 {
                                     mapdiflist[mapdif.number] = mapdif;
                                     break;
@@ -670,7 +676,7 @@ void MMLReader::replaceMacro(std::map<std::string, std::string, cmpByStringLengt
         {
             isMusic = true;
         }
-        else if (!isMusic && buf.find("\\") != std::string::npos)    //ƒTƒuƒ‹[ƒ`ƒ“’è‹`
+        else if (!isMusic && buf.find("\\") != std::string::npos)    //ã‚µãƒ–ãƒ«ãƒ¼ãƒãƒ³å®šç¾©
         {
             isSub = true;
         }
@@ -735,7 +741,7 @@ void MMLReader::readSubRoutine(int& subsize)
                 if (getMultiDigit(n))
                 {
                     int subnum = n;
-                    for (int i = 0; i < subdata.size(); i++)   //‘½d’è‹`–h~
+                    for (int i = 0; i < subdata.size(); i++)   //å¤šé‡å®šç¾©é˜²æ­¢
                     {
                         if (subdata[i].num == subnum)
                         {
@@ -753,7 +759,7 @@ void MMLReader::readSubRoutine(int& subsize)
                         SubData sd;
                         sd.num = subnum;
                         sd.addr = totalpos + subsize;
-                        data.push_back(LOOP_MID_END);    //ƒ‹[ƒv“r’†I—¹ƒR[ƒh‚Å–ß‚é
+                        data.push_back(LOOP_MID_END);    //ãƒ«ãƒ¼ãƒ—é€”ä¸­çµ‚äº†ã‚³ãƒ¼ãƒ‰ã§æˆ»ã‚‹
                         sd.data = data;
                         subdata[subnum] = sd;
                         subsize += data.size();
@@ -795,7 +801,7 @@ void MMLReader::readEnvelope(int& envsize)
         skipSpace();
         skipComment();
 
-        if (c == '@')   //‰¹Fw’è‚©Šeí’è‹`
+        if (c == '@')   //éŸ³è‰²æŒ‡å®šã‹å„ç¨®å®šç¾©
         {
             if (!isTrack && !isMusic)
             {
@@ -817,7 +823,7 @@ void MMLReader::readEnvelope(int& envsize)
                     if (getMultiDigit(n))
                     {
                         int envnum = n;
-                        if (envdata.count(n))   //‘½d’è‹`–h~
+                        if (envdata.count(n))   //å¤šé‡å®šç¾©é˜²æ­¢
                         {
                             std::cerr << "Line " << linenum << " : [Envelope difinition] Envelope #" << envnum << " is already exists." << std::endl;
                             exit(1);
@@ -836,7 +842,7 @@ void MMLReader::readEnvelope(int& envsize)
                                 if (getMultiDigit(n))
                                 {
                                     ebody.push_back(n);
-                                    ebody.push_back(1); //È—ª‚³‚ê‚½‚ç1ƒtƒŒ[ƒ€
+                                    ebody.push_back(1); //çœç•¥ã•ã‚ŒãŸã‚‰1ãƒ•ãƒ¬ãƒ¼ãƒ 
                                 }
                                 else if (getc(c))
                                 {
@@ -849,7 +855,7 @@ void MMLReader::readEnvelope(int& envsize)
                                     }
                                     else if (c == '|')
                                     {
-                                        ehead.push_back(ebody.size() / 2 + 1);  //ƒwƒbƒ_©g‚ğŠÜ‚ß‚é‚Æ+1
+                                        ehead.push_back(ebody.size() / 2 + 1);  //ãƒ˜ãƒƒãƒ€è‡ªèº«ã‚’å«ã‚ã‚‹ã¨+1
 
                                         if (ehead.size() > 2)
                                         {
@@ -864,21 +870,21 @@ void MMLReader::readEnvelope(int& envsize)
                                         {
                                             ehead.push_back(0x81);
                                             ehead.push_back(ebody.size() / 2 + 1);
-                                            ebody.push_back(0); //ÅŒã‚É0‚ğ’Ç‰Á‚É‚µ‚ÄŸ‚ÌƒGƒ“ƒxƒ[ƒv‚É—¬‚ê‚È‚¢‚æ‚¤‚É‚·‚é
+                                            ebody.push_back(0); //æœ€å¾Œã«0ã‚’è¿½åŠ ã«ã—ã¦æ¬¡ã®ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ã«æµã‚Œãªã„ã‚ˆã†ã«ã™ã‚‹
                                             ebody.push_back(0);
                                         }
                                         else if (ehead.size() == 1)
                                         {
-                                            //ƒwƒbƒ_1ŒÂ‚¾‚Á‚½‚çƒŠƒŠ[ƒX‚ªÈ—ª‚³‚ê‚½‚Æ‚İ‚È‚·
+                                            //ãƒ˜ãƒƒãƒ€1å€‹ã ã£ãŸã‚‰ãƒªãƒªãƒ¼ã‚¹ãŒçœç•¥ã•ã‚ŒãŸã¨ã¿ãªã™
                                             ehead[0] |= 0x80;
                                             ehead.push_back(ebody.size() / 2 + 1);
-                                            ebody.push_back(0); //ÅŒã‚É0‚ğ’Ç‰Á‚É‚µ‚ÄŸ‚ÌƒGƒ“ƒxƒ[ƒv‚É—¬‚ê‚È‚¢‚æ‚¤‚É‚·‚é
+                                            ebody.push_back(0); //æœ€å¾Œã«0ã‚’è¿½åŠ ã«ã—ã¦æ¬¡ã®ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ã«æµã‚Œãªã„ã‚ˆã†ã«ã™ã‚‹
                                             ebody.push_back(0);
                                         }
                                         else
                                         {
-                                            //•Â‚¶ƒJƒbƒR‚ª—ˆ‚½‚ç•Û‘¶‚µ‚Ä”²‚¯‚é
-                                            ebody[ebody.size() - 1] = 0; //ÅŒã‚Ì’l‚ğ0‚É‚µ‚ÄŸ‚ÌƒGƒ“ƒxƒ[ƒv‚É—¬‚ê‚È‚¢‚æ‚¤‚É‚·‚é
+                                            //é–‰ã˜ã‚«ãƒƒã‚³ãŒæ¥ãŸã‚‰ä¿å­˜ã—ã¦æŠœã‘ã‚‹
+                                            ebody[ebody.size() - 1] = 0; //æœ€å¾Œã®å€¤ã‚’0ã«ã—ã¦æ¬¡ã®ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ã«æµã‚Œãªã„ã‚ˆã†ã«ã™ã‚‹
                                         }
 
                                         std::copy(ehead.begin(), ehead.end(), std::back_inserter(env.data));
@@ -960,8 +966,8 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
 
     while (ss.get(c))
     {
-        int nn = 0;        //ƒRƒ}ƒ“ƒh‚Ì’l
-        int num = 0;        //ƒRƒ}ƒ“ƒh‚É“n‚·”’l“™
+        int nn = 0;        //ã‚³ãƒãƒ³ãƒ‰ã®å€¤
+        int num = 0;        //ã‚³ãƒãƒ³ãƒ‰ã«æ¸¡ã™æ•°å€¤ç­‰
         int tmp = 0;
         std::string digit;
 
@@ -976,14 +982,22 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             break;
         case '/':
             getc(c);
-            if (c == '/')      //1sƒRƒƒ“ƒg
+            if (c == '/')      //1è¡Œã‚³ãƒ¡ãƒ³ãƒˆ
             {
-                skipUntil("\n");   //s––‚Ü‚Å”ò‚Î‚·
+                if (!skipUntil("\n"))   //è¡Œæœ«ã¾ã§é£›ã°ã™
+                {
+                    std::cerr << "No end of comment." << std::endl;
+                    exit(1);
+                }
                 linenum++;
             }
-            else if (c == '*')          //•¡”sƒRƒƒ“ƒg‚Ìn‚Ü‚è
+            else if (c == '*')          //è¤‡æ•°è¡Œã‚³ãƒ¡ãƒ³ãƒˆã®å§‹ã¾ã‚Š
             {
-                skipUntil("*/");   //ƒRƒƒ“ƒg‚ÌI‚í‚è‚Ü‚Å”ò‚Î‚·
+                if (!skipUntil("*/"))   //ã‚³ãƒ¡ãƒ³ãƒˆã®çµ‚ã‚ã‚Šã¾ã§é£›ã°ã™
+                {
+                    std::cerr << "No end of comment." << std::endl;
+                    exit(1);
+                }
             }
             break;
         case 'A':
@@ -1003,7 +1017,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
         case 'g':
             nn = notetbl[c - tmp - 0x61] + octave * 12;
             skipSpace();
-            while (getc(c))          //”¼‰¹
+            while (getc(c))          //åŠéŸ³
             {
                 if (c == '+')
                 {
@@ -1015,12 +1029,12 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 }
                 else
                 {
-                    ss.seekg((int)ss.tellg() - 1);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+                    ss.seekg((int)ss.tellg() - 1);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
                     break;
                 }
                 skipSpace();
             }
-            //ƒm[ƒgƒ}ƒbƒv‚Ìˆ—Bƒm[ƒgƒ}ƒbƒv—LŒø‚Å’è‹`‚Æ•ÏŠ·æ‚ª‘¶İ‚·‚ê‚ÎÀs
+            //ãƒãƒ¼ãƒˆãƒãƒƒãƒ—ã®å‡¦ç†ã€‚ãƒãƒ¼ãƒˆãƒãƒƒãƒ—æœ‰åŠ¹ã§å®šç¾©ã¨å¤‰æ›å…ˆãŒå­˜åœ¨ã™ã‚Œã°å®Ÿè¡Œ
             if (usingNoteMap >= 0 && mapdiflist.count(usingNoteMap) && mapdiflist[usingNoteMap].maplist.count(nn))
             {
                 int newNN = nn;
@@ -1028,7 +1042,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
 
                 for (const auto& [cmd, args] : map.commands)
                 {
-                    if (!isLooped && usingCmds.count(cmd) > 0 && usingCmds[cmd] == args)    //ƒRƒ}ƒ“ƒh‚ªŠù‚Éw’è‚³‚ê‚Ä‚¢‚éê‡‰½‚à‚µ‚È‚¢iƒ‹[ƒv’¼ŒãˆÈŠOj
+                    if (!isLooped && usingCmds.count(cmd) > 0 && usingCmds[cmd] == args)    //ã‚³ãƒãƒ³ãƒ‰ãŒæ—¢ã«æŒ‡å®šã•ã‚Œã¦ã„ã‚‹å ´åˆä½•ã‚‚ã—ãªã„ï¼ˆãƒ«ãƒ¼ãƒ—ç›´å¾Œä»¥å¤–ï¼‰
                     {
                         continue;
                     }
@@ -1066,7 +1080,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         usingCmds[cmd] = args;
                         if (usingCmds.count(cmd + 1))
                         {
-                            usingCmds.erase(cmd + 1);   //’â~ƒRƒ}ƒ“ƒh‚ª‚ ‚Á‚½‚çÁ‚·
+                            usingCmds.erase(cmd + 1);   //åœæ­¢ã‚³ãƒãƒ³ãƒ‰ãŒã‚ã£ãŸã‚‰æ¶ˆã™
                         }
                     }
                     else if (cmd == SW_SWEEP)
@@ -1092,10 +1106,10 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         usingCmds[cmd] = args;
                         if (usingCmds.count(cmd + 1))
                         {
-                            usingCmds.erase(cmd + 1);   //’â~ƒRƒ}ƒ“ƒh‚ª‚ ‚Á‚½‚çÁ‚·
+                            usingCmds.erase(cmd + 1);   //åœæ­¢ã‚³ãƒãƒ³ãƒ‰ãŒã‚ã£ãŸã‚‰æ¶ˆã™
                         }
                     }
-                    else if (cmd == PLAY_DATA)      //–ˆ‰ñÀs‚·‚é‚Ì‚Åg—p’†ƒRƒ}ƒ“ƒh‚É‚Í’Ç‰Á‚µ‚È‚¢
+                    else if (cmd == PLAY_DATA)      //æ¯å›å®Ÿè¡Œã™ã‚‹ã®ã§ä½¿ç”¨ä¸­ã‚³ãƒãƒ³ãƒ‰ã«ã¯è¿½åŠ ã—ãªã„
                     {
                         bool hasmusic = false;
                         for (int i = 0; i < musiclist.size(); i++)
@@ -1127,14 +1141,14 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
 
                         if (usingCmds.count(cmd - 1))
                         {
-                            usingCmds.erase(cmd - 1);   //ŠJnƒRƒ}ƒ“ƒh‚ª‚ ‚Á‚½‚çÁ‚·
+                            usingCmds.erase(cmd - 1);   //é–‹å§‹ã‚³ãƒãƒ³ãƒ‰ãŒã‚ã£ãŸã‚‰æ¶ˆã™
                         }
                     }
                     else if (cmd == TONE)
                     {
                         data.push_back(TONE);
 
-                        if (tr.device == 4)     //DPCMƒgƒ‰ƒbƒN‚È‚ç
+                        if (tr.device == 4)     //DPCMãƒˆãƒ©ãƒƒã‚¯ãªã‚‰
                         {
                             if (dpcmlist.count(args[0]))
                             {
@@ -1153,7 +1167,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         }
                         usingCmds[cmd] = args;
                     }
-                    else if (cmd > 0x6b && cmd != REST_DEFLEN)  //ƒm[ƒg‚Æ‹x•„ˆÈŠO
+                    else if (cmd > 0x6b && cmd != REST_DEFLEN)  //ãƒãƒ¼ãƒˆã¨ä¼‘ç¬¦ä»¥å¤–
                     {
                         data.push_back(cmd);
 
@@ -1169,11 +1183,11 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
 
                 if (map.convert >= 0)
                 {
-                    //ƒm[ƒg‚Ì•ÏŠ·æ‚ª‘¶İ‚µ‚½ê‡•ÏŠ·‚·‚é
+                    //ãƒãƒ¼ãƒˆã®å¤‰æ›å…ˆãŒå­˜åœ¨ã—ãŸå ´åˆå¤‰æ›ã™ã‚‹
                     newNN = map.convert;
                 }
                 
-                if (map.commands.count(REST_DEFLEN))   //‹x•„ƒRƒ}ƒ“ƒh‚ª“ü‚Á‚Ä‚¢‚½ê‡
+                if (map.commands.count(REST_DEFLEN))   //ä¼‘ç¬¦ã‚³ãƒãƒ³ãƒ‰ãŒå…¥ã£ã¦ã„ãŸå ´åˆ
                 {
                     skipSpace();
                     calcLength(REST_DEFLEN, data, lengthtbl, grace, 0);
@@ -1182,7 +1196,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 {
                     if (tr.device == 3 || tr.device == 4)
                     {
-                        //newNN = 0x0f - newNN & 0x0f;  //ƒhƒ‰ƒCƒo‘¤‚Å‚â‚é
+                        //newNN = 0x0f - newNN & 0x0f;  //ãƒ‰ãƒ©ã‚¤ãƒå´ã§ã‚„ã‚‹
                     }
                     else
                     {
@@ -1197,14 +1211,14 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             {
                 if (tr.device == 3 || tr.device == 4)
                 {
-                    //nn = 0x0f - nn & 0x0f;    //ƒhƒ‰ƒCƒo‘¤‚Å‚â‚é
+                    //nn = 0x0f - nn & 0x0f;    //ãƒ‰ãƒ©ã‚¤ãƒå´ã§ã‚„ã‚‹
                 }
                 else
                 {
                     nn += sweepStart;
                 }
 
-                //‚ ‚Ü‚è‘å‚«‚­‚È‚è‰ß‚¬‚È‚¢‚æ‚¤‚É‚·‚é
+                //ã‚ã¾ã‚Šå¤§ãããªã‚Šéããªã„ã‚ˆã†ã«ã™ã‚‹
                 while (prevnotes.size() > 20)
                 {
                     prevnotes.pop();
@@ -1257,7 +1271,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
 
                     if (pdvol > 0)
                     {
-                        //ƒ{ƒŠƒ…[ƒ€‚ğ–ß‚·
+                        //ãƒœãƒªãƒ¥ãƒ¼ãƒ ã‚’æˆ»ã™
                         data.push_back(VOLUME_ABS);
                         data.push_back(volume);
                     }
@@ -1269,12 +1283,12 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 prevnotes.push(nn);
             }
             break;
-        case 'r':   //‹x•„
+        case 'r':   //ä¼‘ç¬¦
         case 'R':
             skipSpace();
             if (isNextChar('-'))
             {
-                data.push_back(ENV_DISABLE);            //ƒGƒ“ƒxƒ[ƒv–³Œø
+                data.push_back(ENV_DISABLE);            //ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ç„¡åŠ¹
             }
 
             skipSpace();
@@ -1320,7 +1334,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
 
                 if (pdvol > 0)
                 {
-                    //ƒ{ƒŠƒ…[ƒ€‚ğ–ß‚·
+                    //ãƒœãƒªãƒ¥ãƒ¼ãƒ ã‚’æˆ»ã™
                     data.push_back(VOLUME_ABS);
                     data.push_back(volume);
                 }
@@ -1331,7 +1345,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             }
             prevnotes.push(REST_DEFLEN);
             break;
-        case '[':   //ƒ‹[ƒvŠJn
+        case '[':   //ãƒ«ãƒ¼ãƒ—é–‹å§‹
             skipSpace();
             if (getMultiDigit(n))
             {
@@ -1340,15 +1354,15 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 isLooped = true;
             }
             break;
-        case ']':   //ƒ‹[ƒvI—¹
+        case ']':   //ãƒ«ãƒ¼ãƒ—çµ‚äº†
             data.push_back(LOOP_END);
             isLooped = true;
             break;
-        case ':':   //ƒ‹[ƒv“r’†I—¹
+        case ':':   //ãƒ«ãƒ¼ãƒ—é€”ä¸­çµ‚äº†
             data.push_back(LOOP_MID_END);
             isLooped = true;
             break;
-        case 'q':   //ƒQ[ƒgƒ^ƒCƒ€q
+        case 'q':   //ã‚²ãƒ¼ãƒˆã‚¿ã‚¤ãƒ q
             skipSpace();
             if (getMultiDigit(n))
             {
@@ -1356,7 +1370,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 data.push_back(n);
             }
             break;
-        case 'u':   //ƒQ[ƒgƒ^ƒCƒ€u
+        case 'u':   //ã‚²ãƒ¼ãƒˆã‚¿ã‚¤ãƒ u
             skipSpace();
             if (getMultiDigit(n))
             {
@@ -1364,7 +1378,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 data.push_back(n);
             }
             break;
-        case 'Q':   //ƒQ[ƒgƒ^ƒCƒ€Q
+        case 'Q':   //ã‚²ãƒ¼ãƒˆã‚¿ã‚¤ãƒ Q
             skipSpace();
             if (getMultiDigit(n))
             {
@@ -1372,7 +1386,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 data.push_back(n);
             }
             break;
-        case 'k':   //‘Š‘ÎƒL[ƒVƒtƒg
+        case 'k':   //ç›¸å¯¾ã‚­ãƒ¼ã‚·ãƒ•ãƒˆ
             skipSpace();
             if (getMultiDigit(n))
             {
@@ -1380,7 +1394,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 data.push_back(n);
             }
             break;
-        case 'K':   //â‘ÎƒL[ƒVƒtƒg
+        case 'K':   //çµ¶å¯¾ã‚­ãƒ¼ã‚·ãƒ•ãƒˆ
             skipSpace();
             if (getMultiDigit(n))
             {
@@ -1388,16 +1402,16 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 data.push_back(n);
             }
             break;
-        case '&':   //ƒXƒ‰[
+        case '&':   //ã‚¹ãƒ©ãƒ¼
             data.push_back(TAI_SLUR);
             break;
-        case '@':   //‰¹Fw’è‚©Šeí’è‹`
+        case '@':   //éŸ³è‰²æŒ‡å®šã‹å„ç¨®å®šç¾©
             skipSpace();
-            if (getMultiDigit(n))   //”’l‚È‚ç‰¹Fw’è
+            if (getMultiDigit(n))   //æ•°å€¤ãªã‚‰éŸ³è‰²æŒ‡å®š
             {
                 data.push_back(TONE);
 
-                if (tr.device == 4)     //DPCMƒgƒ‰ƒbƒN‚È‚ç
+                if (tr.device == 4)     //DPCMãƒˆãƒ©ãƒƒã‚¯ãªã‚‰
                 {
                     if (dpcmlist.count(n))
                     {
@@ -1417,7 +1431,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             }
             else if (getc(c))
             {
-                if (c == 'p' || c == 'P')       //w’è‚µ‚½‹È”Ô†‚Ìƒf[ƒ^‚ğÄ¶
+                if (c == 'p' || c == 'P')       //æŒ‡å®šã—ãŸæ›²ç•ªå·ã®ãƒ‡ãƒ¼ã‚¿ã‚’å†ç”Ÿ
                 {
                     skipSpace();
                     if (getMultiDigit(n))
@@ -1440,9 +1454,9 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         }
                     }
                 }
-                if (c == 'm' || c == 'M')       //ƒm[ƒgƒ}ƒbƒv’è‹`
+                if (c == 'm' || c == 'M')       //ãƒãƒ¼ãƒˆãƒãƒƒãƒ—å®šç¾©
                 {
-                    if (isTrack || trheadsize == 0) //‹È’†‚©ƒTƒuƒ‹[ƒ`ƒ“’†‚É‚ ‚Á‚½‚çw’è
+                    if (isTrack || trheadsize == 0) //æ›²ä¸­ã‹ã‚µãƒ–ãƒ«ãƒ¼ãƒãƒ³ä¸­ã«ã‚ã£ãŸã‚‰æŒ‡å®š
                     {
                         skipSpace();
                         if (getMultiDigit(n))
@@ -1464,12 +1478,12 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     }
                     else
                     {
-                        //‚»‚êˆÈŠO‚Í’è‹`H
+                        //ãã‚Œä»¥å¤–ã¯å®šç¾©ï¼Ÿ
                         std::cerr << "Line " << linenum << " : Invalid map diffinition." << std::endl;
                         exit(1);
                     }
                 }
-                else if (c == 'd' || c == 'D')   //ƒfƒ`ƒ…[ƒ“
+                else if (c == 'd' || c == 'D')   //ãƒ‡ãƒãƒ¥ãƒ¼ãƒ³
                 {
                     skipSpace();
                     if (getMultiDigit(n))
@@ -1489,25 +1503,25 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         }
                     }
                 }
-                else if (c == 'v' || c == 'V')   //‰¹—ÊƒGƒ“ƒxƒ[ƒv
+                else if (c == 'v' || c == 'V')   //éŸ³é‡ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—
                 {
                     skipSpace();
                     getAndPushEnvAssign(data, envdata, VOLUME_ENV, v_offset);
                     break;
                 }
-                else if (c == 'f' || c == 'F')   //‰¹’öƒGƒ“ƒxƒ[ƒv
+                else if (c == 'f' || c == 'F')   //éŸ³ç¨‹ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—
                 {
                     skipSpace();
                     getAndPushEnvAssign(data, envdata, FREQ_ENV, f_offset);
                     break;
                 }
-                else if (c == 'n' || c == 'N')   //ƒm[ƒgƒGƒ“ƒxƒ[ƒv
+                else if (c == 'n' || c == 'N')   //ãƒãƒ¼ãƒˆã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—
                 {
                     skipSpace();
                     getAndPushEnvAssign(data, envdata, NOTE_ENV, n_offset);
                     break;
                 }
-                else if (c == 't' || c == 'T')   //‰¹FƒGƒ“ƒxƒ[ƒv
+                else if (c == 't' || c == 'T')   //éŸ³è‰²ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—
                 {
                     skipSpace();
                     getAndPushEnvAssign(data, envdata, TONE_ENV, t_offset);
@@ -1515,11 +1529,11 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 }
                 else
                 {
-                    ss.seekg((int)ss.tellg() - 1);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+                    ss.seekg((int)ss.tellg() - 1);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
                 }
             }
             break;
-        case 'l':   //ƒfƒtƒHƒ‹ƒg‰¹’·
+        case 'l':   //ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆéŸ³é•·
             skipSpace();
             if (getMultiDigit(n))
             {
@@ -1545,10 +1559,10 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 }
             }
             break;
-        case 'L':   //–³ŒÀƒ‹[ƒv
+        case 'L':   //ç„¡é™ãƒ«ãƒ¼ãƒ—
             data.push_back(INF_LOOP);
             break;
-        case 'o':   //ƒIƒNƒ^[ƒu
+        case 'o':   //ã‚ªã‚¯ã‚¿ãƒ¼ãƒ–
         case 'O':
             skipSpace();
             if (getMultiDigit(n))
@@ -1560,17 +1574,17 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 octave = n;
             }
             break;
-        case '>':   //ƒIƒNƒ^[ƒuã‚°
+        case '>':   //ã‚ªã‚¯ã‚¿ãƒ¼ãƒ–ä¸Šã’
             octave += (octaveReverse) ? -1 : 1;
             break;
-        case '<':   //ƒIƒNƒ^[ƒu‰º‚°
+        case '<':   //ã‚ªã‚¯ã‚¿ãƒ¼ãƒ–ä¸‹ã’
             octave += (octaveReverse) ? 1 : -1;
             break;
-        case 'v':   //ƒgƒ‰ƒbƒNƒ{ƒŠƒ…[ƒ€w’è
+        case 'v':   //ãƒˆãƒ©ãƒƒã‚¯ãƒœãƒªãƒ¥ãƒ¼ãƒ æŒ‡å®š
         case 'V':
             skipSpace();
             getc(c);
-            if (c == '+')           //‘Š‘Îw’è+
+            if (c == '+')           //ç›¸å¯¾æŒ‡å®š+
             {
                 skipSpace();
                 if (getMultiDigit(n))
@@ -1584,7 +1598,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     volume += n;
                 }
             }
-            else if (c == '-')           //‘Š‘Îw’è-
+            else if (c == '-')           //ç›¸å¯¾æŒ‡å®š-
             {
                 skipSpace();
                 if (getMultiDigit(n))
@@ -1600,9 +1614,9 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             }
             else if (isDigit(c))
             {
-                ss.seekg((int)ss.tellg() - 1);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+                ss.seekg((int)ss.tellg() - 1);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
 
-                if (getMultiDigit(n))    //â‘Îw’è
+                if (getMultiDigit(n))    //çµ¶å¯¾æŒ‡å®š
                 {
                     if (n > 15)
                     {
@@ -1614,11 +1628,11 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 }
             }
             break;
-        case 't':   //ƒgƒ‰ƒbƒNŠJn‚©ƒeƒ“ƒ|
+        case 't':   //ãƒˆãƒ©ãƒƒã‚¯é–‹å§‹ã‹ãƒ†ãƒ³ãƒ
         case 'T':
-            if (isNextStr("rack"))   //ƒgƒ‰ƒbƒNŠJn
+            if (isNextStr("rack"))   //ãƒˆãƒ©ãƒƒã‚¯é–‹å§‹
             {
-                //ƒTƒuƒ‹[ƒ`ƒ“’†
+                //ã‚µãƒ–ãƒ«ãƒ¼ãƒãƒ³ä¸­
                 if (trheadsize == 0)
                 {
                     skipSpace();
@@ -1645,12 +1659,12 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     }
                     else
                     {
-                        usingCmds.clear();  //ƒ}ƒbƒvŠÖŒW‚Ì•Ï”‚ğ‚±‚±‚ÅƒŠƒZƒbƒg‚·‚é
+                        usingCmds.clear();  //ãƒãƒƒãƒ—é–¢ä¿‚ã®å¤‰æ•°ã‚’ã“ã“ã§ãƒªã‚»ãƒƒãƒˆã™ã‚‹
                         usingNoteMap = -1;
 
-                        usePDelay = false;  //‹^—ƒfƒBƒŒƒC‚àƒŠƒZƒbƒg
+                        usePDelay = false;  //ç–‘ä¼¼ãƒ‡ã‚£ãƒ¬ã‚¤ã‚‚ãƒªã‚»ãƒƒãƒˆ
 
-                        data.push_back(TRACK_END);    //I—¹ƒR[ƒh
+                        data.push_back(TRACK_END);    //çµ‚äº†ã‚³ãƒ¼ãƒ‰
                         tr.data = data;
                         tracks.push_back(tr);
                         data.clear();
@@ -1687,7 +1701,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     }
                 }
             }
-            else if (getMultiDigit(n))    //ƒeƒ“ƒ|
+            else if (getMultiDigit(n))    //ãƒ†ãƒ³ãƒ
             {
                 if (!isTrack)
                 {
@@ -1711,14 +1725,14 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 data.push_back(fskip);
             }
             break;
-        case 's':   //ƒ\ƒtƒgƒEƒFƒAƒXƒC[ƒv
-        case 'S':   //ƒ\ƒtƒgƒEƒFƒAƒXƒC[ƒv
+        case 's':   //ã‚½ãƒ•ãƒˆã‚¦ã‚§ã‚¢ã‚¹ã‚¤ãƒ¼ãƒ—
+        case 'S':   //ã‚½ãƒ•ãƒˆã‚¦ã‚§ã‚¢ã‚¹ã‚¤ãƒ¼ãƒ—
         {
                 int start, end, delay, speed;
                 bool res = false;
                 skipSpace();
                 getc(c);
-                if (c == '*')   //‰ğœ
+                if (c == '*')   //è§£é™¤
                 {
                     data.push_back(SW_SWEEP_STOP);
                     sweepStart = 0;
@@ -1759,7 +1773,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 }
             }
             break;
-        case 'p':   //‹^—ƒfƒBƒŒƒC
+        case 'p':   //ç–‘ä¼¼ãƒ‡ã‚£ãƒ¬ã‚¤
         case 'P':
             if (isNextChar('d'))
             {
@@ -1802,10 +1816,10 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 }
             }
             break;
-        case 'h':   //ƒn[ƒhƒEƒFƒA–½—ß
+        case 'h':   //ãƒãƒ¼ãƒ‰ã‚¦ã‚§ã‚¢å‘½ä»¤
         case 'H':
             getc(c);
-            if (c == 's' || c == 'S')   //ƒn[ƒhƒEƒFƒAƒXƒC[ƒv
+            if (c == 's' || c == 'S')   //ãƒãƒ¼ãƒ‰ã‚¦ã‚§ã‚¢ã‚¹ã‚¤ãƒ¼ãƒ—
             {
                 int rate, dir, amount;
                 bool res = false;
@@ -1849,7 +1863,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     exit(1);
                 }
             }
-            else if (c == 'e' || c == 'E')  //ƒn[ƒhƒEƒFƒAƒGƒ“ƒxƒ[ƒv
+            else if (c == 'e' || c == 'E')  //ãƒãƒ¼ãƒ‰ã‚¦ã‚§ã‚¢ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—
             {
                 int rate, loop;
                 bool res = false;
@@ -1885,7 +1899,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 }
             }
             break;
-        case '\\':   //ƒTƒuƒ‹[ƒ`ƒ“
+        case '\\':   //ã‚µãƒ–ãƒ«ãƒ¼ãƒãƒ³
             skipSpace();
             if (getMultiDigit(n))
             {
@@ -1898,13 +1912,13 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 }
             }
             break;
-        case '}':   //I—¹
+        case '}':   //çµ‚äº†
             if (trheadsize > 0)
             {
                 if (isTrack)
                 {
                     isTrack = false;
-                    data.push_back(TRACK_END);    //I—¹ƒR[ƒh
+                    data.push_back(TRACK_END);    //çµ‚äº†ã‚³ãƒ¼ãƒ‰
                     tr.data = data;
                     tracks.push_back(tr);
                     data.clear();
@@ -1912,33 +1926,33 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
 
                 std::sort(tracks.begin(), tracks.end());
 
-                //‹È‚ªI—¹‚µ‚½‚Ì‚Åƒwƒbƒ_ì¬
-                //ƒgƒ‰ƒbƒN”¨1ƒgƒ‰ƒbƒN‚ÌƒAƒhƒŒƒX¨1ƒgƒ‰ƒbƒN‚Ìƒgƒ‰ƒbƒN”Ô†¨1ƒgƒ‰ƒbƒN‚Ì‰¹Œ¹”Ô†¨2ƒgƒ‰ƒbƒN‚ÌƒAƒhƒŒƒX¨2ƒgƒ‰ƒbƒN‚Ìƒgƒ‰ƒbƒN”Ô†c
-                //ƒfƒtƒH‰¹’·‚Ì‡
+                //æ›²ãŒçµ‚äº†ã—ãŸã®ã§ãƒ˜ãƒƒãƒ€ä½œæˆ
+                //ãƒˆãƒ©ãƒƒã‚¯æ•°â†’1ãƒˆãƒ©ãƒƒã‚¯ã®ã‚¢ãƒ‰ãƒ¬ã‚¹â†’1ãƒˆãƒ©ãƒƒã‚¯ã®ãƒˆãƒ©ãƒƒã‚¯ç•ªå·â†’1ãƒˆãƒ©ãƒƒã‚¯ã®éŸ³æºç•ªå·â†’2ãƒˆãƒ©ãƒƒã‚¯ã®ã‚¢ãƒ‰ãƒ¬ã‚¹â†’2ãƒˆãƒ©ãƒƒã‚¯ã®ãƒˆãƒ©ãƒƒã‚¯ç•ªå·â€¦
+                //ãƒ‡ãƒ•ã‚©éŸ³é•·ã®é †
                 int pos = totalpos + trheadsize;
                 std::vector<unsigned char> trhead;
 
-                for (int i = 0; i < tracks.size(); i++)
+                for (const auto& t : tracks)
                 {
-                    trhead.push_back(tracks[i].track);          //ƒgƒ‰ƒbƒN”Ô†
-                    trhead.push_back(tracks[i].device);         //ƒgƒ‰ƒbƒN‚Ì‰¹Œ¹”Ô†
-                    trhead.push_back(pos & 0x00ff);        //ƒgƒ‰ƒbƒNŠJnƒAƒhƒŒƒX‚Ì‰ºˆÊƒoƒCƒg
-                    trhead.push_back((pos & 0xff00) >> 8); //ƒgƒ‰ƒbƒNŠJnƒAƒhƒŒƒX‚ÌãˆÊƒoƒCƒg
-                    pos += tracks[i].data.size();
+                    trhead.push_back(t.track);          //ãƒˆãƒ©ãƒƒã‚¯ç•ªå·
+                    trhead.push_back(t.device);         //ãƒˆãƒ©ãƒƒã‚¯ã®éŸ³æºç•ªå·
+                    trhead.push_back(pos & 0x00ff);        //ãƒˆãƒ©ãƒƒã‚¯é–‹å§‹ã‚¢ãƒ‰ãƒ¬ã‚¹ã®ä¸‹ä½ãƒã‚¤ãƒˆ
+                    trhead.push_back((pos & 0xff00) >> 8); //ãƒˆãƒ©ãƒƒã‚¯é–‹å§‹ã‚¢ãƒ‰ãƒ¬ã‚¹ã®ä¸Šä½ãƒã‚¤ãƒˆ
+                    pos += t.data.size();
                 }
 
-                trhead.push_back(0xff);             //ƒgƒ‰ƒbƒNƒwƒbƒ_I’[
-                trhead.push_back(lengthtbl[3]);     //ƒfƒtƒHƒ‹ƒg‚ÌƒfƒtƒHƒ‹ƒg‰¹’·i4•ª‰¹•„j
+                trhead.push_back(0xff);             //ãƒˆãƒ©ãƒƒã‚¯ãƒ˜ãƒƒãƒ€çµ‚ç«¯
+                trhead.push_back(lengthtbl[3]);     //ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã®ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆéŸ³é•·ï¼ˆ4åˆ†éŸ³ç¬¦ï¼‰
 
-                //‘S•”€”õ‚ª‚Å‚«‚½‚ç–ß‚è’l‚ÉƒRƒs[‚µ‚Ä”²‚¯‚é
+                //å…¨éƒ¨æº–å‚™ãŒã§ããŸã‚‰æˆ»ã‚Šå€¤ã«ã‚³ãƒ”ãƒ¼ã—ã¦æŠœã‘ã‚‹
                 std::copy(trhead.begin(), trhead.end(), std::back_inserter(data));
 
-                for (int i = 0; i < tracks.size(); i++)
+                for (const auto& t : tracks)
                 {
-                    std::copy(tracks[i].data.begin(), tracks[i].data.end(), std::back_inserter(data));
+                    std::copy(t.data.begin(), t.data.end(), std::back_inserter(data));
                 }
             }
-            return; //1‹È‚¸‚Â“Ç‚Ş‚Ì‚Å‚±‚±‚Åreturn‚·‚é
+            return; //1æ›²ãšã¤èª­ã‚€ã®ã§ã“ã“ã§returnã™ã‚‹
         default:
             std::cerr << "Line " << linenum << " : Unknown command '" << c << "'" << std::endl;
             exit(1);
@@ -1946,7 +1960,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
         }
     }
 
-    //•Â‚¶ƒJƒbƒR‚ª‘«‚è‚È‚¢
+    //é–‰ã˜ã‚«ãƒƒã‚³ãŒè¶³ã‚Šãªã„
     std::cerr << "Missing }." << std::endl;
     exit(1);
 }
@@ -1962,13 +1976,13 @@ bool MMLReader::skipUntil(std::string input)
         {
             if (c == input[i])
             {
-                if (i == (int)input.size() - 1)     //‘S•”ˆê’v‚µ‚½
+                if (i == (int)input.size() - 1)     //å…¨éƒ¨ä¸€è‡´ã—ãŸ
                 {
                     return true;
                 }
                 else
                 {
-                    if (!ss.get(c))                //“r’†‚ÅI’[‚É’B‚µ‚½
+                    if (!ss.get(c))                //é€”ä¸­ã§çµ‚ç«¯ã«é”ã—ãŸ
                     {
                         return false;
                     }
@@ -1985,7 +1999,7 @@ bool MMLReader::skipUntil(std::string input)
             linenum++;
         }
     }
-    return false;   //ˆê’v‚¹‚¸I’[‚É’B‚µ‚½
+    return false;   //ä¸€è‡´ã›ãšçµ‚ç«¯ã«é”ã—ãŸ
 }
 
 
@@ -2011,13 +2025,13 @@ bool MMLReader::skipSpace()
         {
             linenum++;
         }
-        else if (c != ' ' && c != '@' && c != '\t' && c != '\r')
+        else if (c != ' ' && c != 'ã€€' && c != '\t' && c != '\r')
         {
             ss.seekg((int)ss.tellg() - 1);
             return true;
         }
     }
-    return false;   //ˆê’v‚¹‚¸I’[‚É’B‚µ‚½
+    return false;   //ä¸€è‡´ã›ãšçµ‚ç«¯ã«é”ã—ãŸ
 }
 
 
@@ -2032,13 +2046,21 @@ bool MMLReader::skipComment()
             getc(c);
             if (c == '/')
             {
-                skipUntil("\n");
+                if (!skipUntil("\n"))
+                {
+                    std::cerr << "No end of comment." << std::endl;
+                    exit(1);
+                }
                 ss.seekg((int)ss.tellg() - 1);
                 return true;
             }
             else if (c == '*')
             {
-                skipUntil("*/");
+                if (!skipUntil("*/"))
+                {
+                    std::cerr << "No end of comment." << std::endl;
+                    exit(1);
+                }
                 return true;
             }
         }
@@ -2068,13 +2090,13 @@ bool MMLReader::skipSpaceUntilNextLine()
             ss.seekg((int)ss.tellg() - 1);
             return true;
         }
-        else if (c != ' ' && c != '@' && c != '\t' && c != '\r')
+        else if (c != ' ' && c != 'ã€€' && c != '\t' && c != '\r')
         {
             ss.seekg((int)ss.tellg() - 1);
             return true;
         }
     }
-    return false;   //ˆê’v‚¹‚¸I’[‚É’B‚µ‚½
+    return false;   //ä¸€è‡´ã›ãšçµ‚ç«¯ã«é”ã—ãŸ
 }
 
 
@@ -2099,6 +2121,12 @@ bool MMLReader::findStr(std::string str, std::string exclude)
             }
             posex++;
         }
+        else if (posex > 0)
+        {
+            //ç›¸é•ãŒã‚ã£ãŸæ–‡å­—ãŒã¾ãŸ1æ–‡å­—ç›®ã¨ä¸€è‡´ã™ã‚‹å¯èƒ½æ€§ãŒã‚ã‚‹ã®ã§æˆ»ã™
+            ss.seekg((int)ss.tellg() - 1);
+            posex = 0;
+        }
         else
         {
             posex = 0;
@@ -2112,14 +2140,17 @@ bool MMLReader::findStr(std::string str, std::string exclude)
             }
             pos++;
         }
+        else if (pos > 0)
+        {
+            //ç›¸é•ãŒã‚ã£ãŸæ–‡å­—ãŒã¾ãŸ1æ–‡å­—ç›®ã¨ä¸€è‡´ã™ã‚‹å¯èƒ½æ€§ãŒã‚ã‚‹ã®ã§æˆ»ã™
+            ss.seekg((int)ss.tellg() - 1);
+            pos = 0;
+        }
         else
         {
             pos = 0;
         }
-
-        skipSpace();
         skipComment();
-        skipSpace();
     }
     return false;
 }
@@ -2144,23 +2175,22 @@ bool MMLReader::findStr(std::string str)
             }
             pos++;
         }
-        else
+        else if (pos > 0)
         {
-            if (c == '\n')
-            {
-                linenum++;
-            }
+            //ç›¸é•ãŒã‚ã£ãŸæ–‡å­—ãŒã¾ãŸ1æ–‡å­—ç›®ã¨ä¸€è‡´ã™ã‚‹å¯èƒ½æ€§ãŒã‚ã‚‹ã®ã§æˆ»ã™
+            ss.seekg((int)ss.tellg() - 1);
             pos = 0;
         }
-
-        skipSpace();
+        else
+        {
+            pos = 0;
+        }
         skipComment();
-        skipSpace();
     }
     return false;
 }
 
-//Ÿ‚É—ˆ‚é•¶š‚ªw’è‚µ‚½•¶š‚Æ“¯‚¶‚©‚Ç‚¤‚©”»’è‚·‚é
+//æ¬¡ã«æ¥ã‚‹æ–‡å­—ãŒæŒ‡å®šã—ãŸæ–‡å­—ã¨åŒã˜ã‹ã©ã†ã‹åˆ¤å®šã™ã‚‹
 bool MMLReader::isNextChar(char input)
 {
     char c;
@@ -2176,7 +2206,7 @@ bool MMLReader::isNextChar(char input)
     }
 }
 
-//Ÿ‚É—ˆ‚é•¶š—ñ‚ªw’è‚µ‚½•¶š—ñ‚Æ“¯‚¶‚©‚Ç‚¤‚©”»’è‚·‚é
+//æ¬¡ã«æ¥ã‚‹æ–‡å­—åˆ—ãŒæŒ‡å®šã—ãŸæ–‡å­—åˆ—ã¨åŒã˜ã‹ã©ã†ã‹åˆ¤å®šã™ã‚‹
 bool MMLReader::isNextStr(std::string str)
 {
     char c;
@@ -2193,14 +2223,14 @@ bool MMLReader::isNextStr(std::string str)
         }
         else
         {
-            ss.seekg((int)ss.tellg() - pos - 1);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+            ss.seekg((int)ss.tellg() - pos - 1);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
             return false;
         }
     }
     return false;
 }
 
-//ƒXƒgƒŠ[ƒ€‚ªI—¹‚µ‚½‚çexit‚·‚éŠÖ”
+//ã‚¹ãƒˆãƒªãƒ¼ãƒ ãŒçµ‚äº†ã—ãŸã‚‰exitã™ã‚‹é–¢æ•°
 bool MMLReader::getc(char& c)
 {
     if (ss.get(c))
@@ -2245,7 +2275,7 @@ bool MMLReader::getMultiHex(int& res)
         }
         else
         {
-            ss.seekg((int)ss.tellg() - 1);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+            ss.seekg((int)ss.tellg() - 1);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
             break;
         }
     }
@@ -2289,7 +2319,7 @@ bool MMLReader::getMultiDigit(int& res)
         }
         else
         {
-            ss.seekg((int)ss.tellg() - 1);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+            ss.seekg((int)ss.tellg() - 1);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
             break;
         }
     }
@@ -2379,13 +2409,13 @@ void MMLReader::calcLength(char cmd, std::vector<unsigned char>& data, std::vect
 
     while (getc(c))
     {
-        if (c == '^' || (cmd == 0x6c && c == 'r'))      //ƒ^ƒCA‚à‚µ‚­‚Í‹x•„‚ª˜A‘±‚Å—ˆ‚½‚Æ‚«
+        if (c == '^' || (cmd == 0x6c && c == 'r'))      //ã‚¿ã‚¤ã€ã‚‚ã—ãã¯ä¼‘ç¬¦ãŒé€£ç¶šã§æ¥ãŸã¨ã
         {
             if (dotted)
             {
                 frames += n;
             }
-            else if (digit.empty())    //‘O‚É”’l‚ª‚È‚¢ê‡ƒfƒtƒH‰¹’·
+            else if (digit.empty())    //å‰ã«æ•°å€¤ãŒãªã„å ´åˆãƒ‡ãƒ•ã‚©éŸ³é•·
             {
                 frames += n;
                 frames += timebase / deflen;
@@ -2400,14 +2430,14 @@ void MMLReader::calcLength(char cmd, std::vector<unsigned char>& data, std::vect
             digit.clear();
             n = 0;
         }
-        else if (c == '.')   //•t“_
+        else if (c == '.')   //ä»˜ç‚¹
         {
-            if (dotted)        //‘½d•t“_
+            if (dotted)        //å¤šé‡ä»˜ç‚¹
             {
                 dottedlen /= 2;
                 n += dottedlen;
             }
-            else if (digit.empty())    //‘O‚É”’l‚ª‚È‚¢ê‡ƒfƒtƒH‰¹’·
+            else if (digit.empty())    //å‰ã«æ•°å€¤ãŒãªã„å ´åˆãƒ‡ãƒ•ã‚©éŸ³é•·
             {
                 n = timebase / deflen;
                 dottedlen = n / 2;
@@ -2422,15 +2452,15 @@ void MMLReader::calcLength(char cmd, std::vector<unsigned char>& data, std::vect
             dotted = true;
             digit.clear();
         }
-        else if (cmd == 0x6c && c == '-' && digit.empty())   //ƒGƒ“ƒxƒ[ƒv–³Œøi‹x•„‚Ì‚İj
+        else if (cmd == 0x6c && c == '-' && digit.empty())   //ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ç„¡åŠ¹ï¼ˆä¼‘ç¬¦ã®ã¿ï¼‰
         {
             envdis = true;
         }
-        else if (c == '%' && digit.empty())   //ƒtƒŒ[ƒ€‰¹’·
+        else if (c == '%' && digit.empty())   //ãƒ•ãƒ¬ãƒ¼ãƒ éŸ³é•·
         {
             framelen = true;
         }
-        else if (c == '~' && digit.empty())  //‘•ü•„
+        else if (c == '~' && digit.empty())  //è£…é£¾ç¬¦
         {
             framelen = true;
             grace = true;
@@ -2458,7 +2488,7 @@ void MMLReader::calcLength(char cmd, std::vector<unsigned char>& data, std::vect
                 }
             }
             frames += n;
-            ss.seekg((int)ss.tellg() - 1);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+            ss.seekg((int)ss.tellg() - 1);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
             break;
         }
 
@@ -2467,18 +2497,18 @@ void MMLReader::calcLength(char cmd, std::vector<unsigned char>& data, std::vect
         skipSpace();
     }
 
-    if (envdis)            //ƒGƒ“ƒxƒ[ƒv–³Œø
+    if (envdis)            //ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ç„¡åŠ¹
     {
         data.push_back(0xf8);
     }
 
-    if (prevGrace > 0)     //‘O‚Ì‰¹•„‚ª‘•ü•„
+    if (prevGrace > 0)     //å‰ã®éŸ³ç¬¦ãŒè£…é£¾ç¬¦
     {
-        if (!grace)  //‚±‚Ì‰¹•„‚à‘•ü•„‚È‚ç‰½‚à‚µ‚È‚¢
+        if (!grace)  //ã“ã®éŸ³ç¬¦ã‚‚è£…é£¾ç¬¦ãªã‚‰ä½•ã‚‚ã—ãªã„
         {
             if (frames == 0)
             {
-                //ƒfƒtƒH‰¹’·‚ğ‰¹’·•t‚«ƒm[ƒg‚É’¼‚·
+                //ãƒ‡ãƒ•ã‚©éŸ³é•·ã‚’éŸ³é•·ä»˜ããƒãƒ¼ãƒˆã«ç›´ã™
                 frames = timebase / deflen;
             }
 
@@ -2487,7 +2517,7 @@ void MMLReader::calcLength(char cmd, std::vector<unsigned char>& data, std::vect
 
             if (frames == timebase / deflen)
             {
-                //ƒfƒtƒH‰¹’·‚Æ“¯‚¶‚É‚È‚Á‚½‚çƒfƒtƒH‰¹’·‚É’¼‚·
+                //ãƒ‡ãƒ•ã‚©éŸ³é•·ã¨åŒã˜ã«ãªã£ãŸã‚‰ãƒ‡ãƒ•ã‚©éŸ³é•·ã«ç›´ã™
                 frames = 0;
             }
         }
@@ -2503,7 +2533,7 @@ void MMLReader::calcLength(char cmd, std::vector<unsigned char>& data, std::vect
     {
         if (frames == 0)
         {
-            //ƒfƒtƒH‰¹’·‚ğ‰¹’·•t‚«ƒm[ƒg‚É’¼‚·
+            //ãƒ‡ãƒ•ã‚©éŸ³é•·ã‚’éŸ³é•·ä»˜ããƒãƒ¼ãƒˆã«ç›´ã™
             frames = timebase / deflen;
         }
 
@@ -2511,7 +2541,7 @@ void MMLReader::calcLength(char cmd, std::vector<unsigned char>& data, std::vect
 
         if (frames == timebase / deflen)
         {
-            //ƒfƒtƒH‰¹’·‚Æ“¯‚¶‚É‚È‚Á‚½‚çƒfƒtƒH‰¹’·‚É’¼‚·
+            //ãƒ‡ãƒ•ã‚©éŸ³é•·ã¨åŒã˜ã«ãªã£ãŸã‚‰ãƒ‡ãƒ•ã‚©éŸ³é•·ã«ç›´ã™
             frames = 0;
         }
     }
@@ -2520,13 +2550,13 @@ void MMLReader::calcLength(char cmd, std::vector<unsigned char>& data, std::vect
     {
         if (grace)
         {
-            prevGrace += frames;     //Ÿ‚Ì‰¹•„‚©‚çˆø‚­’l
+            prevGrace += frames;     //æ¬¡ã®éŸ³ç¬¦ã‹ã‚‰å¼•ãå€¤
         }
-        //‰¹’·•t‚«ƒm[ƒg
+        //éŸ³é•·ä»˜ããƒãƒ¼ãƒˆ
         while (true)
         {
             data.push_back(cmd + 0x80);
-            if (frames > 0xff) // 1ƒoƒCƒg’´‚¦‚½‚ç•ªŠ„
+            if (frames > 0xff) // 1ãƒã‚¤ãƒˆè¶…ãˆãŸã‚‰åˆ†å‰²
             {
                 data.push_back(0xff);
                 data.push_back(TAI_SLUR);
@@ -2553,9 +2583,9 @@ void MMLReader::pushEnvAssign(std::vector<unsigned char>& data, std::map<int, En
     if (envdata.count(envnum))
     {
         data.push_back(envtype);
-        data.push_back(envdata[envnum].addr & 0x00ff);           //ƒGƒ“ƒxƒ[ƒvƒAƒhƒŒƒX‚Ì‰ºˆÊƒoƒCƒg
-        data.push_back((envdata[envnum].addr & 0xff00) >> 8);    //ƒGƒ“ƒxƒ[ƒvƒAƒhƒŒƒX‚ÌãˆÊƒoƒCƒg
-        data.push_back(delay);                              //ƒfƒBƒŒƒC’l
+        data.push_back(envdata[envnum].addr & 0x00ff);           //ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ã‚¢ãƒ‰ãƒ¬ã‚¹ã®ä¸‹ä½ãƒã‚¤ãƒˆ
+        data.push_back((envdata[envnum].addr & 0xff00) >> 8);    //ã‚¨ãƒ³ãƒ™ãƒ­ãƒ¼ãƒ—ã‚¢ãƒ‰ãƒ¬ã‚¹ã®ä¸Šä½ãƒã‚¤ãƒˆ
+        data.push_back(delay);                              //ãƒ‡ã‚£ãƒ¬ã‚¤å€¤
     }
     else
     {
@@ -2578,7 +2608,7 @@ void MMLReader::getAndPushEnvAssign(std::vector<unsigned char>& data, std::map<i
     char c;
     if (isNextChar('*'))
     {
-        data.push_back(envtype + 1);     //’â~ƒRƒ}ƒ“ƒh
+        data.push_back(envtype + 1);     //åœæ­¢ã‚³ãƒãƒ³ãƒ‰
     }
     else
     {
@@ -2606,7 +2636,7 @@ void MMLReader::getCmdArgs(CommandArgs& args)
     char c;
     int n;
     skipSpaceUntilNextLine();
-    if (getMultiDigit(n))       //ƒRƒ}ƒ“ƒh“à—e‚ğ•Û‘¶
+    if (getMultiDigit(n))       //ã‚³ãƒãƒ³ãƒ‰å†…å®¹ã‚’ä¿å­˜
     {
         args.push_back(n);
 
@@ -2656,7 +2686,7 @@ bool MMLReader::getNoteNumber(int& nn)
     }
 
     skipSpace();
-    while (getc(c))          //”¼‰¹
+    while (getc(c))          //åŠéŸ³
     {
         if (c == '+')
         {
@@ -2668,7 +2698,7 @@ bool MMLReader::getNoteNumber(int& nn)
         }
         else
         {
-            ss.seekg((int)ss.tellg() - 1);    //“Ç‚İ‚İˆÊ’u‚ğ–ß‚·
+            ss.seekg((int)ss.tellg() - 1);    //èª­ã¿è¾¼ã¿ä½ç½®ã‚’æˆ»ã™
             break;
         }
         skipSpace();
@@ -2686,7 +2716,7 @@ bool MMLReader::getNoteNumber(int& nn)
     return true;
 }
 
-//‰¹’·¨ƒtƒŒ[ƒ€‚Ì•ÏŠ·ƒe[ƒuƒ‹‚ğì¬‚·‚é
+//éŸ³é•·â†’ãƒ•ãƒ¬ãƒ¼ãƒ ã®å¤‰æ›ãƒ†ãƒ¼ãƒ–ãƒ«ã‚’ä½œæˆã™ã‚‹
 void MMLReader::makeLengthTbl(std::vector<unsigned char> &lengthtbl)
 {
     for (int i = 0; i < sizeof(nthnotetbl); i++)
