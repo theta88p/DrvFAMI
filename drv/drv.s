@@ -317,30 +317,6 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 .endproc
 
 
-;音長テーブルの作成
-;.proc make_frame_tbl
-;音長からフレーム数を計算
-;		lda TimeBase
-;		ldx #1
-;		ldy #11
-;	start:
-;		sec
-;		sbc Length_Tbl, y
-;		cmp Length_Tbl, y
-;		bcc next
-;		inx
-;		jmp start
-;	next:
-;		txa
-;		sta Frame_Tbl, y
-;		lda TimeBase
-;		ldx #1
-;		dey
-;		bpl start 
-;		rts
-;.endproc
-
-
 ;トラック処理
 .proc track
 	start:
@@ -1930,17 +1906,3 @@ Freq_Tbl:
 	.word	$0953
 	.word	$08cb
 	.word	$084a
-
-Length_Tbl:
-	.byte	64
-	.byte	48
-	.byte	32
-	.byte	24
-	.byte	16
-	.byte	12
-	.byte	8
-	.byte	6
-	.byte	4
-	.byte	3
-	.byte	2
-	.byte	1
