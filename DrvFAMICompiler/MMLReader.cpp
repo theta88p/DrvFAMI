@@ -2605,7 +2605,6 @@ void MMLReader::pushEnvAssign(std::vector<unsigned char>& data, std::map<int, En
 void MMLReader::getAndPushEnvAssign(std::vector<unsigned char>& data, std::map<int, EnvData>& envdata, int envtype, int offset)
 {
     int n;
-    char c;
     if (isNextChar('*'))
     {
         data.push_back(envtype + 1);     //停止コマンド
@@ -2633,7 +2632,6 @@ void MMLReader::getAndPushEnvAssign(std::vector<unsigned char>& data, std::map<i
 
 void MMLReader::getCmdArgs(CommandArgs& args)
 {
-    char c;
     int n;
     skipSpaceUntilNextLine();
     if (getMultiDigit(n))       //コマンド内容を保存
