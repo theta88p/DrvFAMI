@@ -284,6 +284,8 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		bne @N
 		lda #FRAG_END
 		sta Frags, x
+		lda #$ff
+		sta Device, x	;$ffを入れて処理しないようにしておく
 	@N:
 		inx
 		cpx #MAX_TRACK
@@ -459,6 +461,8 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		bmi end		;xがマイナスになったら全トラック終了
 		jmp envelope
 	end:
+		lda #$ff
+		sta Work + 2		;発音トラックがあるか判定する変数をリセット
 		ldx #LAST_TRACK
 		jmp interrupt		;割り込み処理に移行
 .endproc
@@ -467,6 +471,13 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 ;割り込み処理
 .proc interrupt
 	start:
+		lda Frags, x
+		and #FRAG_END
+		beq @N
+		dex
+		bpl start
+		jmp end
+	@N:
 		stx ProcTr
 		lda Frags, x
 		and #FRAG_SIL				;現在のトラックが無音の場合、後のトラックの発音処理をする
