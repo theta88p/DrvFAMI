@@ -396,19 +396,19 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		jsr noteenv
 	@N2:
 		lda EnvFrags, x
-		and #FRAG_FENV
+		and #FRAG_SSWP
 		beq @N3
-		jsr freqenv
+		jsr ssweep
 	@N3:
 		lda EnvFrags, x
-		and #FRAG_TENV
+		and #FRAG_FENV
 		beq @N4
-		jsr toneenv
+		jsr freqenv
 	@N4:
 		lda EnvFrags, x
-		and #FRAG_SSWP
+		and #FRAG_TENV
 		beq @N5
-		jsr ssweep
+		jsr toneenv
 	@N5:
 		lda EnvFrags, x
 		and #FRAG_VENV
