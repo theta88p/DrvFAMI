@@ -1753,8 +1753,10 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		sta NoteN, x
 		jsr calcfreq		;周波数計算
 		lda Work
+		sta RefFreq_L, x
 		sta Freq_L, x
 		lda Work + 1
+		sta RefFreq_H, x
 		sta Freq_H, x
 		lda NEnvPos, x
 		asl a
