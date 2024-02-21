@@ -469,37 +469,41 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 	start:
 		stx ProcTr
 		lda Frags, x
-		and #FRAG_SIL		;現在のトラックが無音の場合、後のトラックの発音処理をする
+		and #FRAG_SIL				;現在のトラックが無音の場合、後のトラックの発音処理をする
 		bne exec
+	@L:
 		lda Device, x
 		inx
 		cmp Device, x
-		bne iend
+		bne iend0
 		lda Frags, x
-		ora #FRAG_WRITE_DIS	;無音でない場合は、後のトラックを書き込み無効に
+		ora #FRAG_WRITE_DIS			;無音でない場合は、後のトラックを書き込み無効に
 		sta Frags, x
-		dex
-		dex
-		bmi end		;xがマイナスになったら全トラック終了
-		jmp start
+		jmp @L						;同じ音源の間繰り返す
 	exec:
 		cpx #LAST_TRACK
 		beq iend2					;最終トラックなら何もしない
 		lda Device, x
 		inx
 		cmp Device, x				;後のトラックと音源が違う場合なにもしない
-		bne iend
-		lda Frags ,x
-		and #FRAG_END | FRAG_SIL	;後のトラックが終了か無音の場合なにもしない
+		bne iend0
+		lda Work + 2
+		and #FRAG_END | FRAG_SIL	;発音しているトラックがない場合なにもしない
 		bne iend
 		dex
 		lda Frags, x
 		ora #FRAG_WRITE_DIS			;それ以外は現在のトラックをレジスタ書き込み無効にする
 		sta Frags, x
 		jmp iend2
+	iend0:
+		lda #$ff
+		sta Work + 2				;音源が変わったらリセット
 	iend:
 		ldx ProcTr					;トラック番号を元に戻して復帰
 	iend2:
+		lda Frags, x
+		and Work + 2
+		sta Work + 2
 		dex
 		bpl start
 	end:
@@ -594,7 +598,7 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 
 .proc writereg_end
 		lda Frags, x
-		and #FRAG_WRITE_DIS	;書き込み無効フラグが立っていた場合
+		and #FRAG_WRITE_DIS | FRAG_SIL	;書き込み無効か無音フラグが立っていた場合
 		bne frag
 		ldy Device, x		;周波数の保存
 		lda Freq_L, x
