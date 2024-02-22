@@ -1669,6 +1669,11 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     skipSpace();
                     if (getMultiDigit(n))
                     {
+                        if (n < 0 && n > 15)
+                        {
+                            std::cerr << "Line " << linenum << " : Please set the track number from 0 to 15." << std::endl;
+                            exit(1);
+                        }
                         tr.track = n;
                     }
                     else
