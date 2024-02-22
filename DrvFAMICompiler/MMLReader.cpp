@@ -740,14 +740,10 @@ void MMLReader::readSubRoutine(int& subsize)
                 skipSpace();
                 if (getMultiDigit(n))
                 {
-                    int subnum = n;
-                    for (int i = 0; i < subdata.size(); i++)   //多重定義防止
+                    if (subdata.count(n))   //多重定義防止
                     {
-                        if (subdata[i].num == subnum)
-                        {
-                            std::cerr << "Line " << linenum << " : Subroutine #" << subnum << " is already exists." << std::endl;
-                            exit(1);
-                        }
+                        std::cerr << "Line " << linenum << " : Subroutine #" << n << " is already exists." << std::endl;
+                        exit(1);
                     }
 
                     skipSpace();
@@ -757,11 +753,11 @@ void MMLReader::readSubRoutine(int& subsize)
                         std::vector<unsigned char> data;
                         readBrackets(pos, 0, data);
                         SubData sd;
-                        sd.num = subnum;
+                        sd.num = n;
                         sd.addr = totalpos + subsize;
                         data.push_back(LOOP_MID_END);    //ループ途中終了コードで戻る
                         sd.data = data;
-                        subdata[subnum] = sd;
+                        subdata[n] = sd;
                         subsize += data.size();
                     }
                 }
