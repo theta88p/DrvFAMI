@@ -125,9 +125,9 @@ void MMLReader::readMML()
     readSubRoutine(subsize);
     totalpos += subsize;
 
-    for (int i = 0; i < subdata.size(); i++)
+    for (const auto& [k ,v] : subdata)
     {
-        std::copy(subdata[i].data.begin(), subdata[i].data.end(), std::back_inserter(body));
+        std::copy(v.data.begin(), v.data.end(), std::back_inserter(body));
     }
 
     linenum = 1;
