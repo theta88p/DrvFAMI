@@ -267,9 +267,9 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 	loop:
 		;cpx Work + 2	;最大トラック番号以降は未使用トラック
 		;bcs nouse
-		txa
+		lda #$ff
 		cmp (Work), y	;トラック番号を比較
-		bne nouse		;一致しなかったら未使用トラック
+		beq nouse		;$ffならこれ以降は未使用
 		iny
 		lda (Work), y
 		sta Device, x	;音源番号を取得して保存
