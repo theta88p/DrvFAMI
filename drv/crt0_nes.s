@@ -1,11 +1,3 @@
-;=======================================================================
-;
-;		Start-up program
-;
-;						by A.Watanabe
-;
-;=======================================================================
-
 	.export		exit
 
 	.import		_main
@@ -14,16 +6,9 @@
 
 	.import		ppudrv_init
 	.import		Bank_Change_Prg
-
+	
 	; Linker generated symbols
 	.import		__STACK_START__,	__STACK_SIZE__
-	.import		__RAM_START__,		__RAM_SIZE__
-	.import		__SRAM_START__,		__SRAM_SIZE__
-	.import		__ROM0_START__,		__ROM0_SIZE__
-	.import		__STARTUP_LOAD__,	__STARTUP_RUN__,	__STARTUP_SIZE__
-	.import		__CODE_LOAD__,		__CODE_RUN__,		__CODE_SIZE__
-	.import		__RODATA_LOAD__,	__RODATA_RUN__,		__RODATA_SIZE__
-	.import		__DATA_LOAD__,		__DATA_RUN__,		__DATA_SIZE__
 
 	.include	"drv.inc"
 
@@ -37,12 +22,11 @@
 
 start:
 
-; setup the CPU and System and Sound Driver nsd.lib
-
 	sei
 	cld
 
 	DISP_OFF
+
 
 ;===============================
 ;	メモリ初期化
@@ -69,13 +53,10 @@ Clear_Memory:
 ;===============================
 ;	サウンド初期化
 ;===============================
-Sound_Init:
+;Sound_Init:
 
-	LDA	#$40
-	STA	APU_PAD2
-
-	; Call initialize sound driver
-	;jsr	_nsd_init
+	lda	#$40
+	sta	$4017
 
 ;===============================
 ;	画面初期化
@@ -108,32 +89,32 @@ exit:
 	;---------------
 	; PPU Control
 	lda	#%10101000		;V-Blank NMI: enable
-	sta	PPU_CTRL1
+	sta	$2000
 
 	lda	#%00011110
-	sta	PPU_CTRL2
+	sta	$2001
 
 	;---------------
 	; Wait for vblank
-@wait:	lda	PPU_STATUS
+@wait:	lda	$2002
 	bpl	@wait
 
 	;---------------
 	; reset scrolling
 	lda	#0
-	sta	PPU_VRAM_ADDR1
-	sta	PPU_VRAM_ADDR1
+	sta	$2005
+	sta	$2005
 
 	;---------------
 	; Make all sprites invisible
 	lda	#$00
 	ldy	#$f0
-	sta	PPU_SPR_ADDR
+	sta	$2003
 	ldx	#$40
-@loop:	sty	PPU_SPR_IO
-	sta	PPU_SPR_IO
-	sta	PPU_SPR_IO
-	sty	PPU_SPR_IO
+@loop:	sty	$2007
+	sta	$2007
+	sta	$2007
+	sty	$2007
 	dex
 	bne	@loop
 

@@ -1,9 +1,3 @@
-#==============================================================================
-#	NES Sound Driver Libraly
-#		Make file
-#				A.Waranabe (S.W.)
-#==============================================================================
-
 MAKE_NSF = 1
 
 TOOL_PASS =	
@@ -14,9 +8,9 @@ LIB_PASS =
 #;	LOG files
 ########################################
 
-LOG_FILE    =	comlog.txt		#各コマンドの標準出力先です。
-ERRLOG_FILE =	errlog.txt		#各コマンドのエラー出力先です。
-BLDLOG_FILE =	buildlog.txt		#make.exeの出力先です。
+LOG_FILE    =	comlog.txt
+ERRLOG_FILE =	errlog.txt
+BLDLOG_FILE =	buildlog.txt
 
 
 
@@ -26,8 +20,8 @@ BLDLOG_FILE =	buildlog.txt		#make.exeの出力先です。
 
 #---------------
 #;  MML Compiler (for Music & SE data)
-MC      = $(TOOL_PASS)nsc
-MCFLAGS = -a -e
+MC      = $(TOOL_PASS)
+MCFLAGS =
 
 #---------------
 #;  C Compiler
@@ -78,10 +72,6 @@ CP      = copy
 ########################################
 #;	Source files
 ########################################
-#;
-#;	ソース追加時は、ファイル名を追加してください。
-#;	それだけで、プロジェクトに追加されます。
-#;
 
 #---------------
 #; プロジェクト名
@@ -99,9 +89,7 @@ DBG_FILE   =	test.dbg
 #---------------
 #; ソースファイル
 MAIN_FILES =	nsf.o	\
-		crt0.o			\
-		nmi_main.o		\
-		irq_main.o		\
+		crt0_nsf.o		\
 		main_nsf.o		\
 		drv.o			\
 		data_nsf.o		\
@@ -117,8 +105,8 @@ DBG_FILE   =	test.dbg
 #---------------
 #; ソースファイル
 MAIN_FILES =	ines.o	\
-		crt0.o			\
-		nmi_main.o		\
+		crt0_nes.o		\
+		nmi_main_nes.o	\
 		irq_main.o		\
 		main_nes.o		\
 		drv.o			\
@@ -134,9 +122,6 @@ MML_FILES  =
 #---------------------------------------
 #;	Header files
 #---------------------------------------
-#;
-#;	ビルドに依存するヘッダーファイルは、ここに書いてください。
-#;
 
 #---------------
 #; アセンブリ言語用ヘッダー
@@ -144,22 +129,13 @@ INC_FILES =	drv.inc		\
 			data.bin	\
 
 #---------------
-#; Ｃ言語用ヘッダー
-H_FILES  =	
-
-#---------------
 #; ⊿ＰＣＭファイル
 DMC_FILES =	
-
-
 
 
 #---------------------------------------
 #;	Library files
 #---------------------------------------
-#;
-#;	ビルドに依存するライブラリファイルは、ここに書いてください。
-#;
 
 LIB_FILES =	
 

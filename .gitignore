@@ -348,3 +348,4 @@ errlog.txt
 *.map
 *.o
 *.lst
+*.nes

@@ -4,7 +4,7 @@
 	.include	"nes.inc"
 	.include	"macro.inc"
 
-MMC5 = 1
+;MMC5 = 1
 
 
 MAX_TRACK 	=	16
@@ -38,39 +38,3 @@ FRAG_SSWP			=	%00010000
 FRAG_SSWP_CLR		=	%11101111
 FRAG_ENV_DIS		=	%10000000
 FRAG_ENV_DIS_CLR	=	%01111111
-
-
-;---------------------------------------
-;	システムプログラム中の定数を定義します。
-;---------------------------------------
-
-.scope	sysdef
-
-;PPU
-PPU_Ctrl1_set		= PPU_CTRL1_VBLANK | PPU_CTRL1_SPTBL
-PPU_Ctrl2_set		= PPU_CTRL2_SPDISP | PPU_CTRL2_BGDISP | PPU_CTRL2_SPCLIP | PPU_CTRL2_BGCLIP
-
-.endscope
-
-
-
-
-;---------------------------------------
-;	ＩＯ
-;---------------------------------------
-; $2000 PPU Control Register 0
-PPU_CTRL1_VBLANK	= $80
-PPU_CTRL1_SLAVE		= $40
-PPU_CTRL1_SP16		= $20
-PPU_CTRL1_BGTBL		= $10
-PPU_CTRL1_SPTBL		= $08
-PPU_CTRL1_INC32		= $04
-PPU_CTRL1_NAMETBL	= $03
-
-; $2001 PPU Control Register 1
-PPU_CTRL2_BGCOLOR	= $E0
-PPU_CTRL2_SPDISP	= $10
-PPU_CTRL2_BGDISP	= $08
-PPU_CTRL2_SPCLIP	= $04
-PPU_CTRL2_BGCLIP	= $02
-PPU_CTRL2_COLORMODE	= $01
