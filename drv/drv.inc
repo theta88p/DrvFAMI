@@ -4,6 +4,8 @@
 	.include	"nes.inc"
 	.include	"macro.inc"
 
+MMC5 = 1
+
 
 MAX_TRACK 	=	16
 LAST_TRACK	=	MAX_TRACK - 1

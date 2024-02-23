@@ -15,6 +15,7 @@ FileWriter::FileWriter(std::wstring& path, MMLReader& reader)
     dpcmoffset = reader.dpcmoffset;
     dpcmlist = reader.dpcmlist;
     seqdata = reader.seqdata;
+    extdevice = reader.extdevice;
 }
 
 void FileWriter::createBin()
@@ -166,24 +167,8 @@ void FileWriter::createNsf()
     std::ifstream ifs;
     std::wstring dir;
     Utils::GetModuleDir(dir);
-    std::wstring drv = dir + L"drv.bin";
-    auto drvsize = Utils::GetFileSize(drv);
+    std::wstring drv = dir;
     int maxfilesize = 0x10080;
-
-    ifs.open(drv, std::ifstream::in | std::ifstream::binary);
-    if (!ifs)
-    {
-        std::cerr << "Faild file open drv.bin." << std::endl;
-        exit(1);
-    }
-
-    std::ofstream ofs;
-    ofs.open(outputPath, std::ofstream::out | std::ofstream::binary);
-    if (!ofs)
-    {
-        std::cerr << "Faild to write file." << std::endl;
-        exit(1);
-    }
 
     char c;
     int nesheadsize = 0x10;
@@ -208,6 +193,53 @@ void FileWriter::createNsf()
     nsfhead[0x0b] = 0x80;
     nsfhead[0x0c] = 0xe5;   //再生アドレス
     nsfhead[0x0d] = 0x80;
+    nsfhead[0x7b] = extdevice;   //拡張音源
+
+    if (extdevice & ExtDev::VRC6)
+    {
+        // VRC6
+    }
+    else if (extdevice & ExtDev::VRC7)
+    {
+        // VRC7
+    }
+    else if (extdevice & ExtDev::FDS)
+    {
+        // FDS
+    }
+    else if (extdevice & ExtDev::MMC5)
+    {
+        drv += L"drv_mmc5.bin";
+    }
+    else if (extdevice & ExtDev::N163)
+    {
+        // N163
+    }
+    else if (extdevice & ExtDev::SS5B)
+    {
+        // SS5B
+    }
+    else
+    {
+        //2A03
+        drv += L"drv.bin";
+    }
+
+    auto drvsize = Utils::GetFileSize(drv);
+    ifs.open(drv, std::ifstream::in | std::ifstream::binary);
+    if (!ifs)
+    {
+        std::cerr << "Faild file open driver file." << std::endl;
+        exit(1);
+    }
+
+    std::ofstream ofs;
+    ofs.open(outputPath, std::ofstream::out | std::ofstream::binary);
+    if (!ofs)
+    {
+        std::cerr << "Faild to write file." << std::endl;
+        exit(1);
+    }
 
     for (int i = 0; i < 31; i++)
     {

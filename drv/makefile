@@ -4,6 +4,8 @@
 #				A.Waranabe (S.W.)
 #==============================================================================
 
+MAKE_NSF = 1
+
 TOOL_PASS =	
 INC_PASS = 
 LIB_PASS =
@@ -64,12 +66,6 @@ CP      = copy
 	@echo [Assemble] : $< >>$(ERRLOG_FILE)
 	$(AS) $(ASFLAGS) $< 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
-
-%.o : %.c $(H_FILES)			#;".h"ファイルが更新された場合は、.cは、全部コンパイルする。
-	@echo [Compile] : $< >>$(ERRLOG_FILE)
-	$(CC)  $(CFLAGS) $*.o $< 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
-
-
 %.s : %.mml $(DMC_FILES)		#;".dmc"ファイルが更新された場合は、.mmlは、全部コンパイルする。
 	@echo ======================================================== >>$(LOG_FILE)
 	@echo [Compile] : $< >>$(LOG_FILE)
@@ -77,12 +73,10 @@ CP      = copy
 	@echo [Compile] : $< >>$(ERRLOG_FILE)
 	$(MC) $(MCFLAGS) $< 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
-%.s : %.bmp
-	
 
 
 ########################################
-#;	Siurce files
+#;	Source files
 ########################################
 #;
 #;	ソース追加時は、ファイル名を追加してください。
@@ -93,6 +87,9 @@ CP      = copy
 #; プロジェクト名
 MAIN_PROJ  =	test.nes
 
+
+ifdef MAKE_NSF
+
 #---------------
 #; リンカーの設定
 CFG_FILE   =	nsf.cfg
@@ -101,13 +98,33 @@ DBG_FILE   =	test.dbg
 
 #---------------
 #; ソースファイル
-MAIN_FILES =	nsf.o			\
+MAIN_FILES =	nsf.o	\
 		crt0.o			\
 		nmi_main.o		\
 		irq_main.o		\
-		main_nsf.o			\
+		main_nsf.o		\
 		drv.o			\
-		data_nsf.o			\
+		data_nsf.o		\
+
+else
+
+#---------------
+#; リンカーの設定
+CFG_FILE   =	nesa.cfg
+MAP_FILE   =	test.map
+DBG_FILE   =	test.dbg
+
+#---------------
+#; ソースファイル
+MAIN_FILES =	ines.o	\
+		crt0.o			\
+		nmi_main.o		\
+		irq_main.o		\
+		main_nes.o		\
+		drv.o			\
+		data_nes.o		\
+		
+endif
 
 CHR_FILRS  =
 
@@ -124,6 +141,7 @@ MML_FILES  =
 #---------------
 #; アセンブリ言語用ヘッダー
 INC_FILES =	drv.inc		\
+			data.bin	\
 
 #---------------
 #; Ｃ言語用ヘッダー

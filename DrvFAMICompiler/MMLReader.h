@@ -54,6 +54,15 @@
 #define MEM_WRITE			0xf9
 #define SUBROUTINE			0xfa
 
+enum ExtDev
+{
+	VRC6 = 1,
+	VRC7 = 2,
+	FDS = 4,
+	MMC5 = 8,
+	N163 = 16,
+	SS5B = 32,
+};
 
 class MMLReader
 {
@@ -112,6 +121,7 @@ public:
 	std::map<int, DpcmInfo> dpcmlist;
 	std::vector<unsigned char> seqdata;
 	int dpcmoffset;
+	int extdevice;
 
 	MMLReader();
 	MMLReader(std::wstring& input);

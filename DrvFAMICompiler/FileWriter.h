@@ -11,6 +11,7 @@ private:
 	std::string copyright;
 	int musicnum;
 	int dpcmoffset;
+	int extdevice;
 	std::map<int, DpcmInfo> dpcmlist;
 	std::vector<unsigned char> seqdata;
 

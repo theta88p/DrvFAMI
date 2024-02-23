@@ -9,15 +9,15 @@
 
 	.include	"drv.inc"
 
-;=======================================================================
-;	Zeropage works
+;-----------------------------------------------------------------------
+; Zeropage works
 ;-----------------------------------------------------------------------
 .zeropage
 
 Work:		.res	4
 
-;=======================================================================
-;	Non Zeropage works
+;-----------------------------------------------------------------------
+; Non Zeropage works
 ;-----------------------------------------------------------------------
 .bss
 
@@ -170,7 +170,7 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		rts
 .endproc
 
-
+;ドライバ初期化
 .proc drv_init
 		;変数初期化
 		lda #%00111111
@@ -183,7 +183,13 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		sta $4008
 		lda #%00001111
 		sta $4015
-		
+.ifdef MMC5
+		lda #%00111111
+		sta $5000
+		sta $5004
+		lda #%00000011
+		sta $5015
+.endif
 		lda #0
 		sta SkipCtr
 		sta ProcTr
@@ -196,7 +202,7 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		rts
 .endproc
 
-
+;トラック初期化
 .proc track_init
 		lda #0
 		sta LenCtr, x
@@ -233,7 +239,7 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		rts
 .endproc
 
-
+;サウンド要求
 .proc drv_sndreq
 		sta Work
 		sta SeqAddr_L
@@ -317,7 +323,9 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 .endproc
 
 
-;トラック処理
+; ------------------------------------------------------------------------
+; トラック処理
+; ------------------------------------------------------------------------
 .proc track
 	start:
 		lda Frags, x
@@ -369,307 +377,9 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 .endproc
 
 
-.proc envelope
-	start:
-		lda Frags, x
-		and #FRAG_END
-		beq env			;終了フラグが立っていなければ処理へ
-		dex
-		bpl start		;xがマイナスになったら全トラック終了
-	end1:
-		ldx #LAST_TRACK
-		jmp interrupt		;割り込み処理に移行
-	env:
-		stx ProcTr
-		lda EnvFrags, x
-		and #FRAG_ENV_DIS	;エンベロープ無効フラグが立っていたら音量処理へ
-		bne vol
-	@N0:
-		lda EnvFrags, x
-		and #FRAG_VENV
-		beq @N1
-		jsr volenv
-	@N1:
-		lda EnvFrags, x
-		and #FRAG_NENV
-		beq @N2
-		jsr noteenv
-	@N2:
-		lda EnvFrags, x
-		and #FRAG_SSWP
-		beq @N3
-		jsr ssweep
-	@N3:
-		lda EnvFrags, x
-		and #FRAG_FENV
-		beq @N4
-		jsr freqenv
-	@N4:
-		lda EnvFrags, x
-		and #FRAG_TENV
-		beq @N5
-		jsr toneenv
-	@N5:
-		lda EnvFrags, x
-		and #FRAG_VENV
-		beq vol				;音量エンベロープ無効なら音量処理へ
-		jmp last			;そうでなければ次のトラックへ
-	vol:
-		lda Frags, x
-		and #FRAG_KEYON		;キーオンされていたら音量をトラック音量にする
-		bne trv
-		lda Frags, x
-		and #FRAG_KEYOFF	;キーオフされていたら無音に
-		beq last
-		lda #0
-		sta Volume, x
-		jmp sil
-	trv:
-		lda TrVolume, x
-		sta Volume, x
-		bne last
-	sil:
-		lda Frags, x		;音量が0なら無音フラグを立てる
-		ora #FRAG_SIL
-		sta Frags, x
-	last:
-		dex
-		bmi end		;xがマイナスになったら全トラック終了
-		jmp envelope
-	end:
-		lda #$ff
-		sta Work + 2		;発音トラックがあるか判定する変数をリセット
-		ldx #LAST_TRACK
-		jmp interrupt		;割り込み処理に移行
-.endproc
-
-
-;割り込み処理
-.proc interrupt
-	start:
-		lda Frags, x
-		and #FRAG_END
-		beq @N
-		dex
-		bpl start
-		jmp end
-	@N:
-		stx ProcTr
-		lda Frags, x
-		and #FRAG_SIL				;現在のトラックが無音の場合、後のトラックの発音処理をする
-		bne exec
-	@L:
-		lda Device, x
-		inx
-		cmp Device, x
-		bne iend0
-		lda Frags, x
-		ora #FRAG_WRITE_DIS			;無音でない場合は、後のトラックを書き込み無効に
-		sta Frags, x
-		jmp @L						;同じ音源の間繰り返す
-	exec:
-		cpx #LAST_TRACK
-		beq iend2					;最終トラックなら何もしない
-		lda Device, x
-		inx
-		cmp Device, x				;後のトラックと音源が違う場合なにもしない
-		bne iend0
-		lda Work + 2
-		and #FRAG_END | FRAG_SIL	;発音しているトラックがない場合なにもしない
-		bne iend
-		dex
-		lda Frags, x
-		ora #FRAG_WRITE_DIS			;それ以外は現在のトラックをレジスタ書き込み無効にする
-		sta Frags, x
-		jmp iend2
-	iend0:
-		lda #$ff
-		sta Work + 2				;音源が変わったらリセット
-	iend:
-		ldx ProcTr					;トラック番号を元に戻して復帰
-	iend2:
-		lda Frags, x
-		and Work + 2
-		sta Work + 2
-		dex
-		bpl start
-	end:
-		ldx #LAST_TRACK
-		jmp writereg				;全部終わったらレジスタ書き込みへ
-.endproc
-
-
-;レジスタ書き込み
-.proc writereg
-	start:
-		lda Frags, x
-		and #FRAG_END
-		bne next		;終了フラグが立っていたら次トラックへ
-		lda Frags, x
-		and #FRAG_WRITE_DIS
-		beq exec		;レジスタ書き込み無効フラグが立っていたら終了処理へ
-		jmp writereg_end
-	next:
-		dex
-		bpl start		;xがマイナスになったら全トラック終了
-	end1:
-		rts
-	exec:
-		ldy #0
-		lda Device, x
-		cmp #0
-		beq sqr00
-		ldy #4
-		cmp #1
-		beq sqr00
-		cmp #2
-		beq tri
-		cmp #3
-		beq noi
-		cmp #4
-		beq pcm
-		jmp writereg_end
-	sqr00:
-		jmp writesqr
-	tri:
-		lda Freq_L, x
-		sta $400a
-		lda Freq_H, x
-		sta $400b
-		lda #%10000000
-		ora Volume, x
-		sta $4008
-		jmp writereg_end
-	noi:
-		lda Volume, x
-		ora #%00110000
-		sta $400c
-		lda Tone, x
-		clc
-		ror a
-		ror a
-		lda NoteN, x
-		sta $400e
-		lda #%11111000
-		sta $400f
-		jmp writereg_end
-	pcm:
-		lda Frags, x
-		and #FRAG_KEYON | FRAG_KEYOFF	;キーオンもキーオフもたっていなければ終了
-		beq end
-		lda Frags, x
-		and #FRAG_KEYOFF	;キーオフが立っていたら再生終了
-		bne stop
-		lda NoteN, x
-		sta $4010
-		lda Volume, x
-		beq @N
-		sta $4011
-	@N:
-		lda DpcmOffset
-		sta $4012
-		lda DpcmLength
-		sta $4013
-		lda #%00001111
-		sta $4015
-		lda #%00011111
-		sta $4015
-		jmp end
-	stop:
-		lda #%00001111
-		sta $4015
-	end:
-		jmp writereg_end
-.endproc
-
-
-.proc writereg_end
-		lda Frags, x
-		and #FRAG_WRITE_DIS | FRAG_SIL	;書き込み無効か無音フラグが立っていた場合
-		bne frag
-		ldy Device, x		;周波数の保存
-		lda Freq_L, x
-		sta PrevFreq_L, y
-		lda Freq_H, x
-		sta PrevFreq_H, y
-	frag:
-		lda Frags, x
-		ora #FRAG_LOAD			;ロードフラグを立てる
-		;キーオン・キーオフ・書き込み無効フラグを降ろす
-		and #FRAG_KEYON_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
-		sta Frags, x
-		dex
-		bmi end
-		jmp writereg
-	end:
-		rts
-.endproc
-
-
-.proc writesqr
-		sty Work + 2		;一旦yを保存
-		lda Tone, x
-		clc
-		ror a
-		ror a
-		ror a
-		sta Work
-		lda HEnvReg, x
-		and #%00010000		;ハードウェアエンベロープが有効なら以下を実行
-		bne softenv
-		lda Work
-		ora HEnvReg, x
-		jmp r4000				;そうでなければ以下を実行
-	softenv:
-		lda Work
-		ora #%00110000
-		ora Volume, x
-	r4000:
-		sta $4000, y
-		lda Volume, x		;音量が0ならこれ以降は処理しない
-		bne next
-		jmp writereg_end
-	next:
-		lda Frags, x
-		and #FRAG_KEYON		;キーオンなら
-		bne r4003
-	r4002:
-		ldy Device, x
-		lda Freq_L, x
-		cmp PrevFreq_L, y
-		beq hws
-		ldy Work + 2
-		sta $4002, y
-		lda Freq_H, x
-		ldy Device, x
-		cmp PrevFreq_H, y
-		bne r4003
-		jmp hws
-	r4003:
-		lda Freq_L, x
-		ldy Work + 2
-		sta $4002, y
-		lda #%00001000
-		ora Freq_H, x
-		ldy Work + 2
-		sta $4003, y		;ここに書き込むと波形がリセットされるので注意
-	hws:
-		ldy Work + 2
-		lda HSwpReg, x
-		and #%10000000		;ハードウェアスイープ
-		beq @N
-		lda HSwpReg, x
-		sta $4001, y
-		jmp end
-	@N:
-		lda #%00001000
-		sta $4001, y
-	end:
-		jmp writereg_end
-.endproc
-
-
-;シーケンスデータのロード
+; ------------------------------------------------------------------------
+; シーケンスデータのロード
+; ------------------------------------------------------------------------
 .proc loadseq
 		lda Ptr_L, x
 		sta Work
@@ -1288,7 +998,9 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 .endproc
 
 
-;ノート関係の処理
+; ------------------------------------------------------------------------
+; ノート関係の処理
+; ------------------------------------------------------------------------
 .proc procnote
 		lda Length, x
 		sta LenCtr, x
@@ -1430,6 +1142,84 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		sta Work
 	end:
 		rts
+.endproc
+
+
+; ------------------------------------------------------------------------
+; エンベロープ処理
+; ------------------------------------------------------------------------
+.proc envelope
+	start:
+		lda Frags, x
+		and #FRAG_END
+		beq env			;終了フラグが立っていなければ処理へ
+		dex
+		bpl start		;xがマイナスになったら全トラック終了
+	end1:
+		ldx #LAST_TRACK
+		jmp interrupt		;割り込み処理に移行
+	env:
+		stx ProcTr
+		lda EnvFrags, x
+		and #FRAG_ENV_DIS	;エンベロープ無効フラグが立っていたら音量処理へ
+		bne vol
+	@N0:
+		lda EnvFrags, x
+		and #FRAG_VENV
+		beq @N1
+		jsr volenv
+	@N1:
+		lda EnvFrags, x
+		and #FRAG_NENV
+		beq @N2
+		jsr noteenv
+	@N2:
+		lda EnvFrags, x
+		and #FRAG_SSWP
+		beq @N3
+		jsr ssweep
+	@N3:
+		lda EnvFrags, x
+		and #FRAG_FENV
+		beq @N4
+		jsr freqenv
+	@N4:
+		lda EnvFrags, x
+		and #FRAG_TENV
+		beq @N5
+		jsr toneenv
+	@N5:
+		lda EnvFrags, x
+		and #FRAG_VENV
+		beq vol				;音量エンベロープ無効なら音量処理へ
+		jmp last			;そうでなければ次のトラックへ
+	vol:
+		lda Frags, x
+		and #FRAG_KEYON		;キーオンされていたら音量をトラック音量にする
+		bne trv
+		lda Frags, x
+		and #FRAG_KEYOFF	;キーオフされていたら無音に
+		beq last
+		lda #0
+		sta Volume, x
+		jmp sil
+	trv:
+		lda TrVolume, x
+		sta Volume, x
+		bne last
+	sil:
+		lda Frags, x		;音量が0なら無音フラグを立てる
+		ora #FRAG_SIL
+		sta Frags, x
+	last:
+		dex
+		bmi end		;xがマイナスになったら全トラック終了
+		jmp envelope
+	end:
+		lda #$ff
+		sta Work + 2		;発音トラックがあるか判定する変数をリセット
+		ldx #LAST_TRACK
+		jmp interrupt		;割り込み処理に移行
 .endproc
 
 
@@ -1722,7 +1512,9 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		tay
 		lda Device, x
 		cmp #3				;ノイズとDPCM以外は下へ
-		bcs @N
+		beq @N
+		cmp #4
+		beq @N
 		lda (Work + 2), y		;アドレスにあるデータを取得
 		clc
 		adc RefNoteN, x		;ノートナンバーに加算
@@ -1820,6 +1612,295 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		rts
 .endproc
 
+
+; ------------------------------------------------------------------------
+; 割り込み処理
+; ------------------------------------------------------------------------
+.proc interrupt
+	start:
+		lda Frags, x
+		and #FRAG_END
+		beq @N
+		dex
+		bpl start
+		jmp end
+	@N:
+		stx ProcTr
+		lda Frags, x
+		and #FRAG_SIL				;現在のトラックが無音の場合、後のトラックの発音処理をする
+		bne exec
+	@L:
+		lda Device, x
+		inx
+		cmp Device, x
+		bne iend0
+		lda Frags, x
+		ora #FRAG_WRITE_DIS			;無音でない場合は、後のトラックを書き込み無効に
+		sta Frags, x
+		jmp @L						;同じ音源の間繰り返す
+	exec:
+		cpx #LAST_TRACK
+		beq iend2					;最終トラックなら何もしない
+		lda Device, x
+		inx
+		cmp Device, x				;後のトラックと音源が違う場合なにもしない
+		bne iend0
+		lda Work + 2
+		and #FRAG_END | FRAG_SIL	;発音しているトラックがない場合なにもしない
+		bne iend
+		dex
+		lda Frags, x
+		ora #FRAG_WRITE_DIS			;それ以外は現在のトラックをレジスタ書き込み無効にする
+		sta Frags, x
+		jmp iend2
+	iend0:
+		lda #$ff
+		sta Work + 2				;音源が変わったらリセット
+	iend:
+		ldx ProcTr					;トラック番号を元に戻して復帰
+	iend2:
+		lda Frags, x
+		and Work + 2
+		sta Work + 2
+		dex
+		bpl start
+	end:
+		ldx #LAST_TRACK
+		jmp writereg				;全部終わったらレジスタ書き込みへ
+.endproc
+
+
+; ------------------------------------------------------------------------
+; レジスタ書き込み
+; ------------------------------------------------------------------------
+.proc writereg
+	start:
+		lda Frags, x
+		and #FRAG_END
+		bne next		;終了フラグが立っていたら次トラックへ
+		lda Frags, x
+		and #FRAG_WRITE_DIS
+		beq exec		;レジスタ書き込み無効フラグが立っていたら終了処理へ
+		jmp writereg_end
+	next:
+		dex
+		bpl start		;xがマイナスになったら全トラック終了
+	end1:
+		rts
+	exec:
+		lda Device, x
+	sqr0:
+		cmp #0
+		bne sqr1
+		ldy #0
+		jmp writesqr
+	sqr1:
+		cmp #1
+		bne tri
+		ldy #4
+		jmp writesqr
+	tri:
+		cmp #2
+		bne noi
+		lda Freq_L, x
+		sta $400a
+		lda Freq_H, x
+		sta $400b
+		lda #%10000000
+		ora Volume, x
+		sta $4008
+		jmp writereg_end
+	noi:
+		cmp #3
+		bne pcm
+		lda Volume, x
+		ora #%00110000
+		sta $400c
+		lda Tone, x
+		clc
+		ror a
+		ror a
+		lda NoteN, x
+		sta $400e
+		lda #%11111000
+		sta $400f
+		jmp writereg_end
+	pcm:
+		cmp #4
+		bne mmc5_0
+		lda Frags, x
+		and #FRAG_KEYON | FRAG_KEYOFF	;キーオンもキーオフもたっていなければ終了
+		beq end
+		lda Frags, x
+		and #FRAG_KEYOFF	;キーオフが立っていたら再生終了
+		bne stop
+		lda NoteN, x
+		sta $4010
+		lda Volume, x
+		beq @N
+		sta $4011
+	@N:
+		lda DpcmOffset
+		sta $4012
+		lda DpcmLength
+		sta $4013
+		lda #%00001111
+		sta $4015
+		lda #%00011111
+		sta $4015
+		jmp writereg_end
+	stop:
+		lda #%00001111
+		sta $4015
+	mmc5_0:
+.ifdef MMC5
+		cmp #5
+		bne mmc5_1
+		ldy #0
+		jmp write_mmc5
+	mmc5_1:
+		cmp #6
+		bne end
+		ldy #4
+		jmp write_mmc5
+.endif
+	end:
+		jmp writereg_end
+.endproc
+
+
+;1トラック書き込み終了
+.proc writereg_end
+		lda Frags, x
+		and #FRAG_WRITE_DIS | FRAG_SIL	;書き込み無効か無音フラグが立っていた場合
+		bne frag
+		ldy Device, x		;周波数の保存
+		lda Freq_L, x
+		sta PrevFreq_L, y
+		lda Freq_H, x
+		sta PrevFreq_H, y
+	frag:
+		lda Frags, x
+		ora #FRAG_LOAD			;ロードフラグを立てる
+		;キーオン・キーオフ・書き込み無効フラグを降ろす
+		and #FRAG_KEYON_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
+		sta Frags, x
+		dex
+		bmi end
+		jmp writereg
+	end:
+		rts
+.endproc
+
+
+.proc writesqr
+		sty Work + 2		;一旦yを保存
+		lda Tone, x
+		clc
+		ror a
+		ror a
+		ror a
+		sta Work
+		lda HEnvReg, x
+		and #%00010000		;ハードウェアエンベロープが有効なら以下を実行
+		bne softenv
+		lda Work
+		ora HEnvReg, x
+		jmp r4000				;そうでなければ以下を実行
+	softenv:
+		lda Work
+		ora #%00110000
+		ora Volume, x
+	r4000:
+		sta $4000, y
+		lda Volume, x		;音量が0ならこれ以降は処理しない
+		bne next
+		jmp writereg_end
+	next:
+		lda Frags, x
+		and #FRAG_KEYON		;キーオンなら
+		bne r4003
+	r4002:
+		ldy Device, x
+		lda Freq_L, x
+		cmp PrevFreq_L, y
+		beq hws
+		ldy Work + 2
+		sta $4002, y
+		lda Freq_H, x
+		ldy Device, x
+		cmp PrevFreq_H, y
+		bne r4003
+		jmp hws
+	r4003:
+		lda Freq_L, x
+		ldy Work + 2
+		sta $4002, y
+		lda #%00001000
+		ora Freq_H, x
+		sta $4003, y		;ここに書き込むと波形がリセットされるので注意
+	hws:
+		ldy Work + 2
+		lda HSwpReg, x
+		and #%10000000		;ハードウェアスイープ
+		beq @N
+		lda HSwpReg, x
+		sta $4001, y
+		jmp end
+	@N:
+		lda #%00001000
+		sta $4001, y
+	end:
+		jmp writereg_end
+.endproc
+
+
+;-----------------------------------------------------------------------
+; 拡張音源
+;-----------------------------------------------------------------------
+;MMC5
+.ifdef MMC5
+.proc write_mmc5
+		sty Work + 2		;一旦yを保存
+		lda Tone, x
+		clc
+		ror a
+		ror a
+		ror a
+		ora #%00110000
+		ora Volume, x
+	r5000:
+		sta $5000, y
+		lda Volume, x		;音量が0ならこれ以降は処理しない
+		bne next
+		jmp writereg_end
+	next:
+		lda Frags, x
+		and #FRAG_KEYON		;キーオンなら
+		bne r5003
+	r5002:
+		ldy Device, x
+		lda Freq_L, x
+		cmp PrevFreq_L, y
+		beq end
+		ldy Work + 2
+		sta $5002, y
+		lda Freq_H, x
+		ldy Device, x
+		cmp PrevFreq_H, y
+		bne r5003
+		jmp end
+	r5003:
+		lda Freq_L, x
+		ldy Work + 2
+		sta $5002, y
+		lda #%00001000
+		ora Freq_H, x
+		sta $5003, y		;ここに書き込むと波形がリセットされるので注意
+	end:
+		jmp writereg_end
+.endproc
+.endif
 
 ;ポインタをa個進める
 .proc addptr

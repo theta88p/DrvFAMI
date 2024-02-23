@@ -18,6 +18,7 @@ MMLReader::MMLReader()
     f_offset = 0;
     n_offset = 0;
     t_offset = 0;
+    extdevice = 0;
 }
 
 MMLReader::MMLReader(std::wstring& input) : MMLReader()
@@ -273,6 +274,52 @@ void MMLReader::readDifinitions()
             else if (isNextStr("copyright"))
             {
                 getStrInQuote(copyright);
+            }
+            else if (isNextStr("extdevice"))
+            {
+                std::string str;
+                while (!ss.eof())
+                {
+                    getc(c);
+                    if (c == '\n')
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        str += tolower(c);
+                    }
+                }
+
+                if (str.find("vrc6") != std::string::npos)
+                {
+                    extdevice |= ExtDev::VRC6;
+                }
+
+                if (str.find("vrc7") != std::string::npos)
+                {
+                    extdevice |= ExtDev::VRC7;
+                }
+
+                if (str.find("fds") != std::string::npos)
+                {
+                    extdevice |= ExtDev::FDS;
+                }
+
+                if (str.find("mmc5") != std::string::npos)
+                {
+                    extdevice |= ExtDev::MMC5;
+                }
+
+                if (str.find("n163") != std::string::npos)
+                {
+                    extdevice |= ExtDev::N163;
+                }
+
+                if (str.find("ss5b") != std::string::npos)
+                {
+                    extdevice |= ExtDev::SS5B;
+                }
             }
         }
         else if (c == '@')
