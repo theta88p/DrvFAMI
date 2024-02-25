@@ -22,8 +22,6 @@
 #define LOOP_END			0x6e			
 #define LOOP_MID_END		0x6f
 #define GATE_TIME			0x70
-#define GATE_TIME_U			0x71
-#define GATE_TIME_BIGQ		0x72
 #define KEYSHIFT_REL		0x73
 #define KEYSHIFT_ABS		0x74
 #define TAI_SLUR				0x75
