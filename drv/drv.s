@@ -31,10 +31,7 @@ Octave:			.res	MAX_TRACK	;オクターブ
 NoteN:			.res	MAX_TRACK	;ノートナンバー
 DefLen:			.res	MAX_TRACK	;デフォルト音長
 Length:			.res	MAX_TRACK	;音長
-GateCtr:		.res	MAX_TRACK	;ゲートカウンター
-GateQ:			.res	MAX_TRACK	;qコマンドの値
-GateU:			.res	MAX_TRACK	;uコマンドの値
-GateBQ:			.res	MAX_TRACK	;Qコマンドの値
+Gate:			.res	MAX_TRACK	;上位2bit 使用中のゲートコマンド 下位5bit ゲートコマンドの値
 TrVolume:		.res	MAX_TRACK	;トラック音量
 Volume:			.res	MAX_TRACK	;音量
 Tone:			.res	MAX_TRACK	;音色
@@ -109,8 +106,8 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 ;6e	:]		ループ終了
 ;6f	::		ループ途中終了
 ;70	:qx		ゲートタイム（音長-nの方式。他と排他）
-;71	:ux		ゲートタイム（音長nの方式。他と排他）
-;72	:Qx		ゲートタイム（音長n/8の方式。他と排他）
+;70	:ux		ゲートタイム（音長nの方式。他と排他）
+;70	:Qx		ゲートタイム（音長n/8の方式。他と排他）
 ;73	:kx		キーシフト相対指定
 ;74	:Kx		キーシフト絶対指定
 ;75	:&		次の音がタイ・スラーになる
@@ -209,8 +206,7 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		sta InfLoopAddr_L, x
 		sta InfLoopAddr_H, x
 		sta GateCtr, x
-		sta GateQ, x
-		sta GateU, x
+		sta Gate, x
 		sta KeyShift, x
 		sta Detune, x
 		sta VEnvCtr, x
@@ -498,38 +494,11 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		jsr addptr
 		rts
 	l70:
-		cmp #$70	;ゲート(q)
-		bne l71
-		ldy #1
-		lda (Work), y
-		sta GateQ, x
-		lda #0
-		sta GateU, x
-		sta GateBQ, x
-		lda #2
-		jsr addptr
-		rts
-	l71:
-		cmp #$71	;ゲート(u)
-		bne l72
-		ldy #1
-		lda (Work), y
-		sta GateU, x
-		lda #0
-		sta GateQ, x
-		sta GateBQ, x
-		lda #2
-		jsr addptr
-		rts
-	l72:
-		cmp #$72	;ゲート(Q)
+		cmp #$70	;ゲート
 		bne l73
 		ldy #1
 		lda (Work), y
-		sta GateBQ, x
-		lda #0
-		sta GateU, x
-		sta GateQ, x
+		sta Gate, x
 		lda #2
 		jsr addptr
 		rts
@@ -1004,26 +973,32 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 .proc procnote
 		lda Length, x
 		sta LenCtr, x
-		lda GateBQ, x
-		bne @G2
-		lda GateQ, x
-		bne @G1
-		lda GateU, x
-		bne @G0
+		lda Gate, x
+		and #%00111111
+		sta Work
+		lda Gate, x
+		and #%11000000
+		cmp #%01000000
+		beq @G0				;上位2bitが01ならq
+		cmp #%10000000
+		beq @G1				;10ならu
+		cmp #%11000000
+		beq @G2				;11ならQ
 		lda LenCtr, x
 		sta GateCtr, x
 		jmp next
 	@G0:					;ゲートタイム設定
+		lda LenCtr, x
+		sec
+		sbc Work
 		sta GateCtr, x
 		jmp next
 	@G1:
-		lda LenCtr, x
-		sec
-		sbc GateQ, x
+		lda Work
 		sta GateCtr, x
 		jmp next
 	@G2:
-		tay
+		ldy Work
 		lda LenCtr, x
 		jsr ndiv8
 		sta GateCtr, x

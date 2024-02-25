@@ -534,18 +534,30 @@ void MMLReader::readDifinitions()
                                         }
                                         else if (c == 'q')  //ゲートタイムq
                                         {
-                                            cmd = GATE_TIME_Q;
+                                            cmd = GATE_TIME;
                                             getCmdArgs(args);
+                                            if (args[0] > 0)
+                                            {
+                                                args[0] |= 1 << 6;
+                                        }
                                         }
                                         else if (c == 'u')  //ゲートタイムu
                                         {
-                                            cmd = GATE_TIME_U;
+                                            cmd = GATE_TIME;
                                             getCmdArgs(args);
+                                            if (args[0] > 0)
+                                            {
+                                                args[0] |= 2 << 6;
+                                        }
                                         }
                                         else if (c == 'Q')  //ゲートタイムQ
                                         {
-                                            cmd = GATE_TIME_BIGQ;
+                                            cmd = GATE_TIME;
                                             getCmdArgs(args);
+                                            if (args[0] > 0)
+                                            {
+                                                args[0] |= 3 << 6;
+                                        }
                                         }
                                         else if (c == 'K')  //キーシフト絶対指定
                                         {
@@ -1409,24 +1421,51 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             skipSpace();
             if (getMultiDigit(n))
             {
-                data.push_back(GATE_TIME_Q);
-                data.push_back(n);
+                int gate;
+                if (n == 0)
+                {
+                    gate = 0;
+            }
+                else
+                {
+                    gate = n | (1 << 6);
+                }
+                data.push_back(GATE_TIME);
+                data.push_back(gate);
             }
             break;
         case 'u':   //ゲートタイムu
             skipSpace();
             if (getMultiDigit(n))
             {
-                data.push_back(GATE_TIME_U);
-                data.push_back(n);
+                int gate;
+                if (n == 0)
+                {
+                    gate = 0;
+                }
+                else
+                {
+                    gate = n | (2 << 6);
+                }
+                data.push_back(GATE_TIME);
+                data.push_back(gate);
             }
             break;
         case 'Q':   //ゲートタイムQ
             skipSpace();
             if (getMultiDigit(n))
             {
-                data.push_back(GATE_TIME_BIGQ);
-                data.push_back(n);
+                int gate;
+                if (n == 0)
+                {
+                    gate = 0;
+                }
+                else
+                {
+                    gate = n | (3 << 6);
+                }
+                data.push_back(GATE_TIME);
+                data.push_back(gate);
             }
             break;
         case 'k':   //相対キーシフト
