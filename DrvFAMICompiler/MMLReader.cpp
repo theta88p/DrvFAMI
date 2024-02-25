@@ -539,7 +539,7 @@ void MMLReader::readDifinitions()
                                             if (args[0] > 0)
                                             {
                                                 args[0] |= 1 << 6;
-                                        }
+                                            }
                                         }
                                         else if (c == 'u')  //ゲートタイムu
                                         {
@@ -548,7 +548,7 @@ void MMLReader::readDifinitions()
                                             if (args[0] > 0)
                                             {
                                                 args[0] |= 2 << 6;
-                                        }
+                                            }
                                         }
                                         else if (c == 'Q')  //ゲートタイムQ
                                         {
@@ -557,7 +557,7 @@ void MMLReader::readDifinitions()
                                             if (args[0] > 0)
                                             {
                                                 args[0] |= 3 << 6;
-                                        }
+                                            }
                                         }
                                         else if (c == 'K')  //キーシフト絶対指定
                                         {
@@ -1070,7 +1070,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
         case 'e':
         case 'f':
         case 'g':
-            nn = notetbl[c - tmp - 0x61] + octave * 12;
+            nn = notetbl[c - tmp - 0x61] + (octave + 1) * 12;
             skipSpace();
             while (getc(c))          //半音
             {
@@ -1425,7 +1425,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 if (n == 0)
                 {
                     gate = 0;
-            }
+                }
                 else
                 {
                     gate = n | (1 << 6);
@@ -1649,10 +1649,6 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             skipSpace();
             if (getMultiDigit(n))
             {
-                if (n > 8)
-                {
-                    n = 8;
-                }
                 octave = n;
             }
             break;
@@ -2791,7 +2787,7 @@ bool MMLReader::getNoteNumber(int& nn)
 
     if (getMultiDigit(n))
     {
-        nn += n * 12;
+        nn += (n + 1) * 12;
     }
     else
     {

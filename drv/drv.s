@@ -1072,21 +1072,19 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 ;a=ノートナンバー
 .proc calcfreq
 		ldy #0
-		clc
-		adc #3
-	@L:
-		iny
+	oct:
+		cmp #12
+		bcc @N
 		sec
 		sbc #12
-		cmp #12
-		bcs @L
-;		dey			;周波数テーブルがo1aからなので1オクターブ下げる
-		dey			;ノートナンバー0は-1オクターブなので1オクターブ下げる
-		bpl load_freq
-		ldy #0		;マイナスになったらゼロに
-	
-	load_freq:
-		pha			;周波数テーブルから周波数を取得
+		iny
+		jmp oct
+	@N:
+		dey				;ノートナンバー0は-1オクターブなので1オクターブ下げる
+		bpl load
+		ldy #0			;マイナスになったらゼロに
+	load:
+		pha				;周波数テーブルから周波数を取得
 		tya
 		sta Octave, x
 		pla
