@@ -1117,29 +1117,29 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		pla
 		asl a
 		tay
+		lda Device, x
+		cmp #7
+		beq saw
 		lda Freq_Tbl, y
 		sta Work
 		lda Freq_Tbl + 1, y
 		sta Work + 1
-	
-	;オクターブから周波数を計算する
-		ldy Octave, x
-	calc_freq:
-		beq overflow
+		jmp calc
+	saw:
+.ifdef	VRC6
+		lda Freq_Saw, y
+		sta Work
+		lda Freq_Saw + 1, y
+		sta Work + 1
+.endif
+	calc:
+		ldy Octave, x	;オクターブから周波数を計算する
+	@L:
+		beq end
 		lsr Work + 1
 		ror Work
 		dey
-		jmp calc_freq
-		
-	;オーバーフロー抑止
-	overflow:
-		lda Work + 1
-		cmp #$8
-		bcc end
-		lda #$7
-		sta Work + 1
-		lda #$FF
-		sta Work
+		jmp @L
 	end:
 		rts
 .endproc
@@ -1727,7 +1727,7 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		jmp writereg_end
 	pcm:
 		cmp #4
-		bne mmc5_0
+		bne vrc6_0
 		lda Frags, x
 		and #FRAG_KEYON | FRAG_KEYOFF	;キーオンもキーオフもたっていなければ終了
 		beq end
@@ -1752,14 +1752,32 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 	stop:
 		lda #%00001111
 		sta $4015
+		jmp writereg_end
+	vrc6_0:
+.ifdef VRC6
+		cmp #5
+		bne vrc6_1
+		ldy #$90
+		jmp write_vrc6
+	vrc6_1:
+		cmp #6
+		bne vrc6_2
+		ldy #$a0
+		jmp write_vrc6
+	vrc6_2:
+		cmp #7
+		bne mmc5_0
+		ldy #$b0
+		jmp write_vrc6
+.endif
 	mmc5_0:
 .ifdef MMC5
-		cmp #5
+		cmp #8
 		bne mmc5_1
 		ldy #0
 		jmp write_mmc5
 	mmc5_1:
-		cmp #6
+		cmp #9
 		bne end
 		ldy #4
 		jmp write_mmc5
@@ -1858,6 +1876,55 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 ;-----------------------------------------------------------------------
 ; 拡張音源
 ;-----------------------------------------------------------------------
+;VRC6
+.ifdef VRC6
+.proc write_vrc6
+		sty Work + 3		;yにレジスタの上位アドレスが入ってくるので保存
+		lda #0
+		sta Work + 2
+		cpy #$b0			;sawトラックは別処理
+		beq saw
+	r9000:
+		ldy #0
+		lda Tone, x
+		clc
+		asl a
+		asl a
+		asl a
+		asl a
+		ora Volume, x
+		sta (Work + 2), y
+		jmp next
+	saw:
+		ldy #0
+		lda Volume, x
+		sta (Work + 2), y
+	next:
+		lda Volume, x		;音量が0ならこれ以降は処理しない
+		bne r9001
+		jmp writereg_end
+	r9001:
+		lda #1
+		sta Work + 2
+		lda Freq_L, x
+		sta (Work + 2), y
+	r9002:
+		lda #2
+		sta Work + 2
+		lda Frags, x
+		and #FRAG_KEYON		;キーオンなら
+		beq @N
+		lda #0				;いったん0書き込み
+		sta (Work + 2), y
+	@N:
+		lda #%10000000
+		ora Freq_H, x
+		sta (Work + 2), y
+	end:
+		jmp writereg_end
+.endproc
+.endif
+
 ;MMC5
 .ifdef MMC5
 .proc write_mmc5
@@ -1962,28 +2029,31 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 
 .rodata
 Freq_Tbl:
-;	.word	$07e7
-;	.word	$0775
-;	.word	$0709
-;	.word	$06a3
-;	.word	$0643
-;	.word	$05e9
-;	.word	$0593
-;	.word	$0543
-;	.word	$04f6
-;	.word	$04ae
-;	.word	$046b
-;	.word	$042a
+	.word	$1ada
+	.word	$195a
+	.word	$17f0
+	.word	$169a
+	.word	$1556
+	.word	$1427
+	.word	$1306
+	.word	$11f8
+	.word	$10f7
+	.word	$1004
+	.word	$0f20
+	.word	$0e49
 
-	.word	$0fc3
-	.word	$0ee0
-	.word	$0e08
-	.word	$0d3c
-	.word	$0c7d
-	.word	$0bc7
-	.word	$0b1c
-	.word	$0a7b
-	.word	$09e2
-	.word	$0953
-	.word	$08cb
-	.word	$084a
+.ifdef VRC6
+Freq_Saw:
+	.word	$0f25
+	.word	$0e4a
+	.word	$0d7b
+	.word	$0cb7
+	.word	$0bfe
+	.word	$0b50
+	.word	$0aac
+	.word	$0a11
+	.word	$097e
+	.word	$08f4
+	.word	$0871
+	.word	$07f6
+.endif

@@ -197,15 +197,13 @@ void FileWriter::createNsf()
 
     if (extdevice & ExtDev::VRC6)
     {
-        // VRC6
+        drv += L"drv_vrc6.bin";
     }
     else if (extdevice & ExtDev::VRC7)
     {
-        // VRC7
     }
     else if (extdevice & ExtDev::FDS)
     {
-        // FDS
     }
     else if (extdevice & ExtDev::MMC5)
     {
@@ -213,11 +211,9 @@ void FileWriter::createNsf()
     }
     else if (extdevice & ExtDev::N163)
     {
-        // N163
     }
     else if (extdevice & ExtDev::SS5B)
     {
-        // SS5B
     }
     else
     {
