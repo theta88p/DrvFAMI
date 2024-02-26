@@ -48,10 +48,10 @@ void FileWriter::createNes()
     std::wstring dir;
     Utils::GetModuleDir(dir);
 
-    ifs.open(dir + L"drv.bin", std::ifstream::in | std::ifstream::binary);
+    ifs.open(dir + L"dsp.bin", std::ifstream::in | std::ifstream::binary);
     if (!ifs)
     {
-        std::cerr << "Faild to open drv.bin." << std::endl;
+        std::cerr << "Faild to open dsp.bin." << std::endl;
         exit(1);
     }
 
@@ -65,9 +65,19 @@ void FileWriter::createNes()
 
     char c;
     int offset = 0x10;
-    int dpcmaddr = 0x4000;
+    int dpcmaddr = 0x4000 + offset;
+    int seqaddr = 0x1680;
+    int vectoraddr = 0x8000;
+    int maxfilesize = 0x7ff0;
 
-    for (int i = 0; i < offset; i++)
+    if (seqaddr + seqdata.size() > dpcmaddr + dpcmoffset)
+    {
+        std::cerr << "Sequence data size has reached maximum." << std::endl;
+        std::cerr << "Seq data : " << seqdata.size() << " bytes, Max : " << dpcmaddr + dpcmoffset - seqaddr << " bytes" << std::endl;
+        exit(1);
+    }
+
+    for (int i = 0; i < seqaddr; i++)
     {
         if (ifs && ofs)
         {
@@ -94,13 +104,11 @@ void FileWriter::createNes()
         }
     }
 
-    ifs.seekg(seqdata.size() + offset);
-
-    for (int i = seqdata.size() + offset; i < dpcmaddr + offset; i++)
+    for (int i = seqaddr + seqdata.size(); i < dpcmaddr; i++)
     {
-        if (ifs && ofs)
+        if (ofs)
         {
-            ifs.read(&c, sizeof(char));
+            c = 0;
             ofs.write(&c, sizeof(char));
         }
         else
@@ -110,8 +118,20 @@ void FileWriter::createNes()
         }
     }
 
-    int totalsize = 0;
+    int dpcmsize = 0;
     std::ifstream ifsd;
+
+    for (const auto& [n, file] : dpcmlist)
+    {
+        dpcmsize += file.size;
+    }
+
+    if (dpcmaddr + dpcmsize + dpcmoffset > maxfilesize)
+    {
+        std::cerr << "DPCM data size has reached maximum." << std::endl;
+        std::cerr << "DPCM data : " << dpcmsize << " bytes, Max : " << maxfilesize - dpcmoffset - dpcmaddr << " bytes" << std::endl;
+        exit(1);
+    }
 
     for (const auto& [n, file] : dpcmlist)
     {
@@ -131,11 +151,24 @@ void FileWriter::createNes()
             }
         }
 
-        totalsize += file.size;
         ifsd.close();
     }
 
-    ifs.seekg((int)ifs.tellg() + totalsize);
+    for (int i = dpcmaddr + dpcmsize; i < vectoraddr; i++)
+    {
+        if (ofs)
+        {
+            c = 0;
+            ofs.write(&c, sizeof(char));
+        }
+        else
+        {
+            std::cerr << "Faild to write file." << std::endl;
+            exit(1);
+        }
+    }
+
+    ifs.seekg(vectoraddr);
 
     while (true)
     {

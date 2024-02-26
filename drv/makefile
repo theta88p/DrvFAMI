@@ -1,4 +1,4 @@
-MAKE_NSF = 1
+#MAKE_NSF = 1
 
 TOOL_PASS =	
 INC_PASS = 
@@ -73,12 +73,10 @@ CP      = copy
 #;	Source files
 ########################################
 
+ifdef MAKE_NSF
 #---------------
 #; プロジェクト名
-MAIN_PROJ  =	test.nes
-
-
-ifdef MAKE_NSF
+MAIN_PROJ  =	drv.bin
 
 #---------------
 #; リンカーの設定
@@ -97,6 +95,10 @@ MAIN_FILES =	nsf.o	\
 else
 
 #---------------
+#; プロジェクト名
+MAIN_PROJ  =	test.nes
+
+#---------------
 #; リンカーの設定
 CFG_FILE   =	nesa.cfg
 MAP_FILE   =	test.map
@@ -111,6 +113,7 @@ MAIN_FILES =	ines.o	\
 		main_nes.o		\
 		drv.o			\
 		data_nes.o		\
+		dsp.o		\
 		
 endif
 

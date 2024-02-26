@@ -1,16 +1,18 @@
+.export		_main
+.export		_init
+.export		_play
 
-	.export		_main
-	.export		_init
-	.export		_play
-	
-	.import		drv_init
-	.import		drv_sndreq
-	.import		drv_main
-	.import		set_dpcm
-	.import		_DPCMinfo
-	.import		_BGM0
-	
-	.include	"drv.inc"
+.importzp	sync
+.import		drv_init
+.import		drv_sndreq
+.import		drv_main
+.import		set_dpcm
+.import		DPCMinfo
+.import		BGM0
+.import		dsp_init
+.import		dsp_main
+
+.include	"drv.inc"
 
 
 ; ------------------------------------------------------------------------
@@ -20,10 +22,10 @@
 .rodata
 
 ;Address of D-PCM information
-dpcm_info:	.addr	_DPCMinfo
+dpcm_info:	.addr	DPCMinfo
 
 ;Address of BGM Sequence
-bgm_00:		.addr	_BGM0
+bgm_00:		.addr	BGM0
 
 ; ------------------------------------------------------------------------
 ; main
@@ -31,17 +33,20 @@ bgm_00:		.addr	_BGM0
 .code
 
 .proc	_main
+		jsr _init
 
-	jsr _init
-
-Wait_Next_Flame:
-	jmp	Wait_Next_Flame
-	rts
-
+	Loop:
+		lda sync
+		beq Loop
+		
+		jsr dsp_main
+		
+		jmp	Loop
 .endproc
 
 .proc _init
 	pha
+	jsr dsp_init
 	jsr drv_init
 	
 	lda	dpcm_info

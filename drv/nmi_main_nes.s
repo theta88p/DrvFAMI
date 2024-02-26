@@ -1,12 +1,12 @@
 
-	.export		NMI_main
-	.import		drv_main
-	
-	.import		__cc
-	.import		__ss
-	.import		__mm
-	.import		__hh
+.export		NMI_main
 
+.importzp	sync
+.import		drv_main
+.import		__cc
+.import		__ss
+.import		__mm
+.import		__hh
 
 .segment	"LOWCODE"
 
@@ -25,8 +25,15 @@
 ; Call sound driver main routine
 ;---------------------------------------
 
-	jsr	drv_main
-
+	lda #0
+	sta sync
+	
+	;スプライト転送
+	lda #$07
+	sta $4014
+	jsr drv_main
+	
+	
 ;---------------------------------------
 ; Count-up
 ;---------------------------------------
@@ -41,38 +48,22 @@ Count:
 
 @ss:
 	ldx	__ss
-	cpx	#$59
+	cpx	#59
 	beq	@ss_1
 	inx
 	stx	__ss
-	txa
-	and	#$0F
-	cmp	#$0A
-	bne	@exit
-	txa
-	clc
-	adc	#6
-	sta	__ss
-	bne	@exit
+	jmp @exit
 @ss_1:
 	lda	#0
 	sta	__ss
 
 @mm:
 	ldx	__mm
-	cpx	#$59
+	cpx	#59
 	beq	@mm_1
 	inx
 	stx	__mm
-	txa
-	and	#$0F
-	cmp	#$0A
-	bne	@exit
-	txa
-	clc
-	adc	#6
-	sta	__mm
-	bne	@exit
+	jmp	@exit
 @mm_1:
 	lda	#0
 	sta	__mm
@@ -81,6 +72,9 @@ Count:
 	inc	__hh
 
 @exit:
+
+	lda #1
+	sta sync
 
 ;---------------------------------------
 ;register pop

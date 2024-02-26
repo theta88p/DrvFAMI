@@ -1,20 +1,33 @@
-	.export		__cc
-	.export		__ss
-	.export		__mm
-	.export		__hh
-	.export		drv_main
-	.export		drv_init
-	.export		drv_sndreq
-	.export		set_dpcm
+.exportzp	Frags
+.export		IsProc
+.export		Device
+.export		Octave
+.export		NoteN
+.export		Volume
+.export		Tone
+.export		Freq_L
+.export		Freq_H
+.export		drv_main
+.export		drv_init
+.export		drv_sndreq
+.export		set_dpcm
+.export		__cc
+.export		__ss
+.export		__mm
+.export		__hh
 
-	.include	"drv.inc"
+.include	"drv.inc"
 
 ;-----------------------------------------------------------------------
 ; Zeropage works
 ;-----------------------------------------------------------------------
 .zeropage
 
-Work:		.res	4
+Frags:			.res	MAX_TRACK	;通常のフラグ
+EnvFrags:		.res	MAX_TRACK	;エンベロープのフラグ
+LenCtr:			.res	MAX_TRACK	;音長カウンタ
+GateCtr:		.res	MAX_TRACK	;ゲートカウンター
+Work:			.res	4
 
 ;-----------------------------------------------------------------------
 ; Non Zeropage works
@@ -22,11 +35,8 @@ Work:		.res	4
 .bss
 
 Device:			.res	MAX_TRACK	;トラックで使用している音源
-Frags:			.res	MAX_TRACK	;通常のフラグ
-EnvFrags:		.res	MAX_TRACK	;エンベロープのフラグ
 Ptr_L:			.res	MAX_TRACK	;再生箇所のアドレスL
 Ptr_H:			.res	MAX_TRACK	;再生箇所のアドレスH
-LenCtr:			.res	MAX_TRACK	;音長カウンタ
 Octave:			.res	MAX_TRACK	;オクターブ
 NoteN:			.res	MAX_TRACK	;ノートナンバー
 DefLen:			.res	MAX_TRACK	;デフォルト音長
@@ -78,10 +88,9 @@ HSwpReg:		.res	MAX_TRACK	;ハードウェアスイープレジスタに書き込
 HEnvReg:		.res	MAX_TRACK	;ハードウェアエンベロープレジスタに書き込む値
 LoopDepth:		.res	MAX_TRACK	;ループ深度
 
-__cc:		.byte	0		;= $14	; 1/60単位 (HEX)
-__ss:		.byte	0		;= $15	; 秒【BCD】
-__mm:		.byte	0		;= $16	; 分【BCD】
-__hh:		.byte	0		;= $17	; 時 (HEX)
+LoopN:		.res	MAX_TRACK * MAX_LOOP	;残りループ回数
+LoopAddr_L:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先L
+LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 
 IsProc:			.res	1	;処理中フラグ。0で処理中
 SkipCtr:		.res	1	;スキップカウンタ
@@ -93,11 +102,11 @@ DpcmAddr_L:		.res	1	;DPCMのデータがあるアドレスL
 DpcmAddr_H:		.res	1	;DPCMのデータがあるアドレスH
 DpcmOffset:		.res	1	;DPCMのデータまでのオフセット
 DpcmLength:		.res	1	;DPCMのデータ長
-Rem16N:			.res	1	;ノートナンバーの16の剰余（ノイズとDPCM用）
 
-LoopN:		.res	MAX_TRACK * MAX_LOOP	;残りループ回数
-LoopAddr_L:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先L
-LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
+__cc:		.byte	0		; 1/60単位
+__ss:		.byte	0		; 秒
+__mm:		.byte	0		; 分
+__hh:		.byte	0		; 時
 
 
 ;00～6b	:o0c～o8b	音長デフォ
@@ -151,6 +160,8 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 	start:
 		lda #0
 		sta IsProc
+		ldx #LAST_TRACK
+		jsr pretrack	;トラック処理の前に毎フレームやる処理をここでやる
 		lda SkipCtr
 		clc
 		adc SkipFreq
@@ -319,6 +330,25 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 .endproc
 
 
+.proc pretrack
+	start:
+		lda Frags, x
+		and #FRAG_END
+		beq frag
+		dex
+		bpl start
+		rts
+	frag:
+		lda Frags, x
+		;ロードフラグを立てる
+		ora #FRAG_LOAD
+		;キーオン・キーオフ・書き込み無効フラグを降ろす
+		and #FRAG_KEYON_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
+		sta Frags, x
+		dex
+		bpl start
+		rts
+.endproc
 ; ------------------------------------------------------------------------
 ; トラック処理
 ; ------------------------------------------------------------------------
@@ -1025,7 +1055,7 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		cmp #3				;ノイズとDPCM以外は周波数計算へ
 		beq noise
 		cmp #4
-		beq end1
+		beq noise
 		jmp calcoct
 	noise:
 		lda NoteN, x
@@ -1771,11 +1801,11 @@ LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 		lda Freq_H, x
 		sta PrevFreq_H, y
 	frag:
-		lda Frags, x
-		ora #FRAG_LOAD			;ロードフラグを立てる
+		;lda Frags, x
+		;ora #FRAG_LOAD			;ロードフラグを立てる
 		;キーオン・キーオフ・書き込み無効フラグを降ろす
-		and #FRAG_KEYON_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
-		sta Frags, x
+		;and #FRAG_KEYON_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
+		;sta Frags, x
 		dex
 		bmi end
 		jmp writereg

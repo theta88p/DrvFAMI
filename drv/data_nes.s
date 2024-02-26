@@ -1,11 +1,12 @@
-.export _BGM0
-.export _DPCMinfo
+.export BGM0
+.export DPCMinfo
+.export palette
 
 .segment "MUSDATA"
 
-_BGM0:
-	;.byte	"SEQ"
-	.incbin "test.bin"
+BGM0:
+	.byte	"SEQ"
+	;.incbin "test.bin"
 	;トラックの開始アドレス。とりあえずわかりづらいのでゼロ埋めしておく
 	;.byte	$04, $20, $00, $02, $30, $00, $02, $50, $00, $03, $70, $00, $04, $00, $00, $00
 	;音量エンベロープ
@@ -52,9 +53,25 @@ _BGM0:
 
 .segment "PCMDATA"
 
-_DPCMinfo:
+DPCMinfo:
 	.byte	"DPCM"
+	;.incbin "C:\Programs\mck\Mumml\prog\dmc\909kick3_v60.dmc"
 	;.incbin	"C:\Programs\mck\Mumml\prog\dmc\tight909kick_v60.dmc"
-;	;.incbin "C:\Programs\mck\Mumml\prog\dmc\cowbell.dmc"
+	;.incbin "C:\Programs\mck\Mumml\prog\dmc\cowbell.dmc"
 
+; パレット
+.segment "RODATA"
+palette:
+	.byte	$0F, $0C, $1C, $30
+	.byte	$0F, $05, $00, $30
+	.byte	$0F, $0C, $05, $30
+	.byte	$0F, $13, $36, $30
+
+	.byte	$0F, $0C, $15, $25
+	.byte	$0F, $0C, $1C, $30
+	.byte	$0F, $27, $27, $27
+	.byte	$0F, $15, $25, $35
+
+; パターンテーブル
 .segment "CHARS"
+	.incbin "bg.chr"

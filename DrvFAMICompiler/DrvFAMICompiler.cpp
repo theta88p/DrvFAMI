@@ -6,6 +6,7 @@ void outputUsage()
 {
     std::cout << "DrvFAMI MML Compiler Input -Options\n\n";
     std::cout << "  -o\tOutput filename\n";
+    std::cout << "  -n\tOutput nes file\n";
     std::cout << "  -r\tOutput raw data\n";
 }
 
@@ -16,6 +17,7 @@ int wmain(int argc, wchar_t* argv[])
     std::wstring dir;
     std::wstring ext;
     bool raw = false;
+    bool nes = false;
 
     std::wcout.imbue(std::locale("Japanese"));
     std::wcout << "DrvFAMI MML Compiler v0.1.1  (c) theta 2024" << std::endl;
@@ -79,6 +81,10 @@ int wmain(int argc, wchar_t* argv[])
             case 'R'://Raw
                 raw = true;
                 break;
+            case 'n':
+            case 'N'://NES
+                nes = true;
+                break;
             default:
                 std::wcerr << "Unknown option '-" << argv[i][1] << "'" << std::endl;
                 exit(1);
@@ -89,6 +95,10 @@ int wmain(int argc, wchar_t* argv[])
     if (raw)
     {
         ext = L"bin";
+    }
+    else if (nes)
+    {
+        ext = L"nes";
     }
     else
     {
@@ -120,6 +130,10 @@ int wmain(int argc, wchar_t* argv[])
     if (raw)
     {
         writer.createBin();
+    }
+    else if (nes)
+    {
+        writer.createNes();
     }
     else
     {
