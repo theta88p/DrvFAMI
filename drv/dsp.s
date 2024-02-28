@@ -1202,11 +1202,34 @@ TIME_YPOS = $18
 		sta DspWork
 		lda Freq_H, x
 		sta DspWork + 1
+		bne @L
+		lda DspWork
+		cmp #$0b					;オクターブ9以上はo8b固定
+		bcc @o9
+		cmp #$1b					;オクターブ8以上は別処理
+		bcc @o8
+		jmp @L
+	@o9:
+		lda #8
+		sta DspWork + 2
+		lda #$0d
+		sta DspWork + 3
+		rts
+	@o8:
+		lda #8
+		sta DspWork + 2
+		lda DspWork
+		sec
+		sbc #$0d
+		tay
+		lda Freq_Note_H, y
+		sta DspWork + 3
+		rts
 	@L:
 		lda DspWork + 1
 		bne @E
 		lda DspWork
-		cmp #$36
+		cmp #$35				;レジスタ値が$34(52)より小さくなるまでオクターブを上げる
 		bcs @E
 		jmp next
 	@E:
@@ -1215,14 +1238,14 @@ TIME_YPOS = $18
 		iny
 		jmp @L
 	next:
-		sty DspWork + 2
+		sty DspWork + 2			;7-上げた数がオクターブ
 		lda #7
 		sec
 		sbc DspWork + 2
 		sta DspWork + 2
 		lda DspWork
 		sec
-		sbc #$1c
+		sbc #$1b				;レジスタ値1b(27)がo8bなのでそれを0とする
 		tay
 		lda Freq_Note, y
 		sta DspWork + 3
@@ -1243,7 +1266,11 @@ halftone:
 	.byte	0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0
 
 ;逆引きテーブル
-
+;o7b~07cまでのレジスタ値から音階を引ける
 Freq_Note:
 	.byte	$0b, $0a, $0a, $09, $09, $08, $08, $07, $07, $06, $06, $06, $05, $05, $04, $04
-	.byte	$03, $03, $03, $02, $02, $01, $01, $01, $00, $00, $00
+	.byte	$03, $03, $03, $02, $02, $01, $01, $01, $00, $00, $00, $00
+
+Freq_Note_H:
+	.byte	$0b, $0a, $09, $08, $07, $06, $05, $04
+	.byte	$04, $03, $02, $02, $01, $00, $00, $00
