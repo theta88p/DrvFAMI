@@ -48,7 +48,7 @@ void FileWriter::createNes()
     std::wstring dir;
     Utils::GetModuleDir(dir);
 
-    ifs.open(dir + L"dsp.bin", std::ifstream::in | std::ifstream::binary);
+    ifs.open(dir + L"bin\\dsp.bin", std::ifstream::in | std::ifstream::binary);
     if (!ifs)
     {
         std::cerr << "Faild to open dsp.bin." << std::endl;
@@ -66,7 +66,7 @@ void FileWriter::createNes()
     char c;
     int offset = 0x10;
     int dpcmaddr = 0x4000 + offset;
-    int seqaddr = 0x16c0;
+    int seqaddr = 0x16e0;
     int vectoraddr = 0x8000;
     int maxfilesize = 0x7ff0;
 
@@ -230,7 +230,7 @@ void FileWriter::createNsf()
 
     if (extdevice & ExtDev::VRC6)
     {
-        drv += L"drv_vrc6.bin";
+        drv += L"bin\\drv_vrc6.bin";
     }
     else if (extdevice & ExtDev::VRC7)
     {
@@ -240,7 +240,7 @@ void FileWriter::createNsf()
     }
     else if (extdevice & ExtDev::MMC5)
     {
-        drv += L"drv_mmc5.bin";
+        drv += L"bin\\drv_mmc5.bin";
     }
     else if (extdevice & ExtDev::N163)
     {
@@ -251,7 +251,7 @@ void FileWriter::createNsf()
     else
     {
         //2A03
-        drv += L"drv.bin";
+        drv += L"bin\\drv.bin";
     }
 
     auto drvsize = Utils::GetFileSize(drv);
