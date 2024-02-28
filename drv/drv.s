@@ -512,8 +512,8 @@ __hh:		.byte	0		; 時
 		bne l70
 		jsr loopoffset
 		lda LoopN, y
-		cmp #1
-		bne @E
+		cmp #2
+		bcs @E
 		lda #0
 		sta LoopN, y
 		lda LoopAddr_L, y
