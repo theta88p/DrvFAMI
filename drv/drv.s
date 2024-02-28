@@ -213,6 +213,7 @@ __hh:		.byte	0		; 時
 ;トラック初期化
 .proc track_init
 		lda #0
+		sta Volume, x
 		sta LenCtr, x
 		sta InfLoopAddr_L, x
 		sta InfLoopAddr_H, x
@@ -227,6 +228,8 @@ __hh:		.byte	0		; 時
 		sta RefTone, x
 		ora #FRAG_LOAD
 		sta Frags, x
+		lda #FRAG_ENV_DIS
+		sta EnvFrags, x
 		lda #24
 		sta DefLen, x
 		lda Device, x
