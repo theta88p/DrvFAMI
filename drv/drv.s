@@ -1363,16 +1363,31 @@ __hh:		.byte	0		; 時
 		inc VEnvPos, x		;エンベロープ位置移動
 		lda Volume, x
 		beq frag			;0ならこれ以降処理しない
+		sta Work
+		lda #0
+		sta Work + 1
 		ldy TrVolume, x		;トラックボリュームを掛ける
+		bne @L
+		sta Volume, x
+		jmp frag
 	@L:
 		clc
-		adc Volume, x
+		adc Work
+		bcc @C
+		inc Work + 1
+	@C:
 		dey
 		bne @L
-		lsr a				;16で割る
-		lsr a
-		lsr a
-		lsr a
+		sta Work
+		lsr Work + 1		;16で割る
+		ror Work
+		lsr Work + 1
+		ror Work
+		lsr Work + 1
+		ror Work
+		lsr Work + 1
+		ror Work
+		lda Work
 		sta Volume, x
 		bne ret
 	frag:

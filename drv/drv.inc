@@ -4,8 +4,8 @@
 	.include	"nes.inc"
 	.include	"macro.inc"
 
-;MMC5 = 1
 ;VRC6 = 1
+;MMC5 = 1
 
 
 MAX_TRACK 	=	16
