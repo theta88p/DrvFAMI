@@ -2032,31 +2032,31 @@ __hh:		.byte	0		; 時
 
 .rodata
 Freq_Tbl:
-	.word	$1ada
-	.word	$195a
-	.word	$17f0
-	.word	$169a
-	.word	$1556
-	.word	$1427
-	.word	$1306
-	.word	$11f8
-	.word	$10f7
-	.word	$1004
-	.word	$0f20
-	.word	$0e49
+	.word	$1a7f
+	.word	$18ff
+	.word	$177f
+	.word	$163d
+	.word	$14f9
+	.word	$13de
+	.word	$12bd
+	.word	$11bf
+	.word	$10be
+	.word	$0fbb
+	.word	$0ed7
+	.word	$0df6
 
 .ifdef VRC6
 Freq_Saw:
-	.word	$0f25
-	.word	$0e4a
-	.word	$0d7b
-	.word	$0cb7
-	.word	$0bfe
-	.word	$0b50
-	.word	$0aac
-	.word	$0a11
-	.word	$097e
-	.word	$08f4
-	.word	$0871
-	.word	$07f6
+	.word	$1e6c
+	.word	$1ca2
+	.word	$1b18
+	.word	$1991
+	.word	$1815
+	.word	$16ba
+	.word	$1584
+	.word	$144f
+	.word	$1315
+	.word	$1214
+	.word	$1110
+	.word	$1010
 .endif
