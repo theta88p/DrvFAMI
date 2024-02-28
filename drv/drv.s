@@ -226,7 +226,7 @@ __hh:		.byte	0		; 時
 		sta EnvFrags, x
 		sta Tone, x
 		sta RefTone, x
-		ora #FRAG_LOAD
+		lda #FRAG_LOAD
 		sta Frags, x
 		lda #FRAG_ENV_DIS
 		sta EnvFrags, x
@@ -240,7 +240,6 @@ __hh:		.byte	0		; 時
 	@N:
 		lda #15
 	@E:
-		sta Volume, x
 		sta TrVolume, x
 		lda #%00001000
 		sta HSwpReg, x
@@ -1992,7 +1991,7 @@ __hh:		.byte	0		; 時
 		lda LoopDepth, x
 		sec
 		sbc #1				;深度1がメモリ0の位置なので1引く
-		ldx ProcTr			;xが0なら終了
+		ldx ProcTr			;トラック0なら終了
 		beq @E
 	@L:
 		clc

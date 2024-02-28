@@ -24,7 +24,7 @@
 #define GATE_TIME			0x70
 #define KEYSHIFT_REL		0x73
 #define KEYSHIFT_ABS		0x74
-#define TAI_SLUR				0x75
+#define TAI_SLUR			0x75
 #define TONE				0x76
 #define TEMPO				0x77
 #define PLAY_DATA			0x78
