@@ -46,6 +46,7 @@ nsdlみたいな書き方ですけど、ofgsみたいに数値と待ちフレーム数が
 #offsetf	音程					〃
 #offsetn	ノート					〃
 #offsett	音色					〃
+#extdevice	拡張音源の指定。今のところMMC5とVRC6が指定できます。
 
 cdefgab	音符。%をつけるとフレーム音長。~で装飾符。
 r		休符
