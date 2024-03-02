@@ -65,8 +65,16 @@
     <ClInclude Include="cmpByStringLength.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\Readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="drvfamic.rc">
+      <Filter>リソース ファイル</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

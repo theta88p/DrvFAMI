@@ -160,12 +160,16 @@
     <ClInclude Include="MMLReader.h" />
     <ClInclude Include="NoteMap.h" />
     <ClInclude Include="NoteMapDif.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="SubData.h" />
     <ClInclude Include="TrackData.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\Readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="drvfamic.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
