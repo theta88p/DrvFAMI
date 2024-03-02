@@ -427,9 +427,9 @@ __hh:		.byte	0		; 時
 		ora #FRAG_KEYON					;キーオンフラグを立てる
 		sta Frags, x
 	@N:
-		;キーオフ・キーオン無効・ロード・無音フラグを降ろす
+		;キーオン無効・ロードフラグを降ろす
 		lda Frags, x
-		and #FRAG_KEYOFF_CLR & FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR & FRAG_SIL_CLR
+		and #FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
 		sta Frags, x
 		lda EnvFrags, x
 		and #FRAG_ENV_DIS_CLR	;エンベロープ無効フラグを降ろす
@@ -444,8 +444,8 @@ __hh:		.byte	0		; 時
 		bne l6d
 		lda Frags, x
 		ora #FRAG_KEYOFF						;キーオフフラグを立てる
-		;キーオン・キーオン無効・ロードフラグを降ろす
-		and #FRAG_KEYON_CLR & FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
+		;キーオン無効・ロードフラグを降ろす
+		and #FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
 		sta Frags, x
 		lda DefLen, x
 		sta Length, x
@@ -758,9 +758,9 @@ __hh:		.byte	0		; 時
 		ora #FRAG_KEYON					;キーオンフラグを立てる
 		sta Frags, x
 	@N:
-		;キーオフ・キーオン無効・ロード・無音フラグを降ろす
+		;キーオン無効・ロードフラグを降ろす
 		lda Frags, x
-		and #FRAG_KEYOFF_CLR & FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR & FRAG_SIL_CLR
+		and #FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
 		sta Frags, x
 		lda EnvFrags, x
 		and #FRAG_ENV_DIS_CLR	;エンベロープ無効フラグを降ろす
@@ -776,8 +776,8 @@ __hh:		.byte	0		; 時
 		bne led
 		lda Frags, x
 		ora #FRAG_KEYOFF						;キーオフフラグを立てる
-		;キーオン・キーオン無効・ロードフラグを降ろす
-		and #FRAG_KEYON_CLR & FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
+		;キーオン無効・ロードフラグを降ろす
+		and #FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
 		sta Frags, x
 		ldy #1
 		lda (Work), y
@@ -1211,6 +1211,9 @@ __hh:		.byte	0		; 時
 	trv:
 		lda TrVolume, x
 		sta Volume, x
+		lda Frags, x		;音量が0でなければ無音フラグを降ろす
+		and #FRAG_SIL_CLR
+		sta Frags, x
 		bne last
 	sil:
 		lda Frags, x		;音量が0なら無音フラグを立てる
@@ -1391,6 +1394,9 @@ __hh:		.byte	0		; 時
 		ror Work
 		lda Work
 		sta Volume, x
+		lda Frags, x		;無音フラグを降ろす
+		and #FRAG_SIL_CLR
+		sta Frags, x
 		bne ret
 	frag:
 		lda Frags, x
