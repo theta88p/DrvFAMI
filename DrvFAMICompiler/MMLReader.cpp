@@ -1218,7 +1218,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         }
                         else
                         {
-                            data.push_back(n);
+                            data.push_back(args[0]);
                         }
                         usingCmds[cmd] = args;
                     }
