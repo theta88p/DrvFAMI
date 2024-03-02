@@ -221,7 +221,7 @@ TIME_YPOS = $18
 		sta CH1VOL1 + 0
 	@spr2:
 		lda Volume, x
-		cmp #8
+		cmp #9
 		bcc @next2
 		lda #$ff
 		sta CH1VOL2 + 0
@@ -346,7 +346,7 @@ TIME_YPOS = $18
 		sta CH2VOL1 + 0
 	@spr2:
 		lda Volume, x
-		cmp #8
+		cmp #9
 		bcc @next2
 		lda #$ff
 		sta CH2VOL2 + 0
@@ -522,7 +522,7 @@ TIME_YPOS = $18
 		sta CH4VOL1 + 0
 	@spr2:
 		lda Volume, x
-		cmp #8
+		cmp #9
 		bcc @next2
 		lda #$ff
 		sta CH4VOL2 + 0
