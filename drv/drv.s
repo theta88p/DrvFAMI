@@ -226,7 +226,7 @@ __hh:		.byte	0		; 時
 		sta EnvFrags, x
 		sta Tone, x
 		sta RefTone, x
-		lda #FRAG_LOAD
+		lda #FRAG_LOAD | FRAG_SIL
 		sta Frags, x
 		lda #FRAG_ENV_DIS
 		sta EnvFrags, x
@@ -1850,9 +1850,13 @@ __hh:		.byte	0		; 時
 		lda HEnvReg, x
 		and #%00010000		;ハードウェアエンベロープが有効なら以下を実行
 		bne softenv
+		lda Frags, x
+		and #FRAG_KEYON
+		beq hws
 		lda Work
 		ora HEnvReg, x
-		jmp r4000				;そうでなければ以下を実行
+		sta $4000, y
+		jmp hws
 	softenv:
 		lda Work
 		ora #%00110000
@@ -1860,42 +1864,35 @@ __hh:		.byte	0		; 時
 	r4000:
 		sta $4000, y
 		lda Volume, x		;音量が0ならこれ以降は処理しない
-		bne next
+		bne hws
 		jmp writereg_end
-	next:
+	hws:
+		ldy Work + 2
+		lda HSwpReg, x
+		and #%10000000		;ハードウェアスイープ有効なら以下を実行
+		beq r4002
+		lda Frags, x
+		and #FRAG_KEYON
+		beq end
+	r4002:
+		lda HSwpReg, x
+		sta $4001, y
+		lda Freq_L, x
+		ldy Work + 2
+		sta $4002, y
 		lda Frags, x
 		and #FRAG_KEYON		;キーオンなら
 		bne r4003
-	r4002:
-		ldy Device, x
-		lda Freq_L, x
-		cmp PrevFreq_L, y
-		beq hws
-		ldy Work + 2
-		sta $4002, y
 		lda Freq_H, x
 		ldy Device, x
 		cmp PrevFreq_H, y
 		bne r4003
-		jmp hws
+		jmp end
 	r4003:
-		lda Freq_L, x
 		ldy Work + 2
-		sta $4002, y
 		lda #%00001000
 		ora Freq_H, x
 		sta $4003, y		;ここに書き込むと波形がリセットされるので注意
-	hws:
-		ldy Work + 2
-		lda HSwpReg, x
-		and #%10000000		;ハードウェアスイープ
-		beq @N
-		lda HSwpReg, x
-		sta $4001, y
-		jmp end
-	@N:
-		lda #%00001000
-		sta $4001, y
 	end:
 		jmp writereg_end
 .endproc
