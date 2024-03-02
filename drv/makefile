@@ -1,4 +1,3 @@
-MAKE_NSF = 1
 TOOL_PASS =	
 INC_PASS = 
 LIB_PASS =
@@ -42,7 +41,8 @@ ARFLAGS = a
 #---------------
 #;  Linker
 LINKER  = $(TOOL_PASS)ld65
-LDFLAGS = -C $(CFG_FILE) -L$(LIB_PASS) -v -m $(MAP_FILE) -vm --dbgfile $(DBG_FILE) -o
+LD_NSF_FLAGS = -C $(CFG_NSF_FILE) -L$(LIB_PASS) -v -m $(MAP_NSF_FILE) -vm --dbgfile $(DBG_NSF_FILE) -o
+LD_DSP_FLAGS = -C $(CFG_DSP_FILE) -L$(LIB_PASS) -v -m $(MAP_DSP_FILE) -vm --dbgfile $(DBG_DSP_FILE) -o
 
 #---------------
 #;  File delete
@@ -99,68 +99,61 @@ LIB_FILES =
 #;	Build process
 ########################################
 
-ifdef MAKE_NSF
-
 #---------------
 #; リンカーの設定
-CFG_FILE   =	nsf.cfg
-MAP_FILE   =	drv.map
-DBG_FILE   =	drv.dbg
+CFG_NSF_FILE   =	nsf.cfg
+MAP_NSF_FILE   =	drv.map
+DBG_NSF_FILE   =	drv.dbg
+
+CFG_DSP_FILE   =	nesa.cfg
+MAP_DSP_FILE   =	dsp.map
+DBG_DSP_FILE   =	dsp.dbg
 
 #---------------
 #; ソースファイル
-MAIN_FILES =	main_nsf.o		\
-				nsf.o			\
-				crt0_nsf.o		\
-				data_nsf.o		\
+MAIN_NSF_FILES =	main_nsf.o		\
+					nsf.o			\
+					crt0_nsf.o		\
+					data_nsf.o		\
+
+MAIN_DSP_FILES =	ines.o			\
+					crt0_nes.o		\
+					nmi_main_nes.o	\
+					irq_main.o		\
+					main_nes.o		\
+					drv.o			\
+					data_nes.o		\
+					dsp.o			\
+
 
 .PHONY: all clean
 
 #---------------
 #; build of main program
-all : drv.bin drv_mmc5.bin drv_vrc6.bin
+all : drv.bin drv_mmc5.bin drv_vrc6.bin dsp.bin
 
-drv.bin : drv.o $(MAIN_FILES) $(CHR_FILES) 
+drv.bin : drv.o $(MAIN_NSF_FILES)
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
-	$(LINKER) $(LDFLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	$(LINKER) $(LD_NSF_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
-drv_mmc5.bin : drv_mmc5.o $(MAIN_FILES) $(CHR_FILES) 
+drv_mmc5.bin : drv_mmc5.o $(MAIN_NSF_FILES)
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
-	$(LINKER) $(LDFLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	$(LINKER) $(LD_NSF_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
-drv_vrc6.bin : drv_vrc6.o $(MAIN_FILES) $(CHR_FILES) 
+drv_vrc6.bin : drv_vrc6.o $(MAIN_NSF_FILES)
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
-	$(LINKER) $(LDFLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	$(LINKER) $(LD_NSF_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
-else
-
-#---------------
-#; リンカーの設定
-CFG_FILE   =	nesa.cfg
-MAP_FILE   =	test.map
-DBG_FILE   =	test.dbg
-
-#---------------
-#; ソースファイル
-MAIN_FILES =	ines.o	\
-		crt0_nes.o		\
-		nmi_main_nes.o	\
-		irq_main.o		\
-		main_nes.o		\
-		drv.o			\
-		data_nes.o		\
-		dsp.o		\
-
-dsp.bin : $(MAIN_FILES) $(CHR_FILES) 
+dsp.bin : $(MAIN_DSP_FILES) $(CHR_FILES) 
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
-	$(LINKER) $(LDFLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	$(LINKER) $(LD_DSP_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
-endif
+
 
 #---------------
 #; Crean up
 clean:
-#	@$(RM) *.nes		#NESファイルは、消さないでおく。
+	@$(RM) *.nes		#NESファイルは、消さないでおく。
 	@$(RM) *.bak
 	@$(RM) *.map
 	@$(RM) *.lst
