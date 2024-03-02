@@ -1367,9 +1367,11 @@ __hh:		.byte	0		; 時
 		lda #0
 		sta Work + 1
 		ldy TrVolume, x		;トラックボリュームを掛ける
-		bne @L
+		bne @N
 		sta Volume, x
 		jmp frag
+	@N:
+		iny
 	@L:
 		clc
 		adc Work
