@@ -1742,7 +1742,7 @@ __hh:		.byte	0		; 時
 		clc
 		ror a
 		ror a
-		lda NoteN, x
+		ora NoteN, x
 		sta $400e
 		lda #%11111000
 		sta $400f
