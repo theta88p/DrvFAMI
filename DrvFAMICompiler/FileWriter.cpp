@@ -319,8 +319,6 @@ void FileWriter::createNsf()
         }
     }
 
-    ifs.seekg(nsfheadsize);
-
     while (true)
     {
         if (ifs && ofs)
@@ -364,7 +362,7 @@ void FileWriter::createNsf()
 
     if (dpcmlist.size() > 0)
     {
-        for (int i = drvsize + seqdata.size(); i < dpcmaddr + dpcmoffset; i++)
+        for (int i = nsfheadsize + drvsize + seqdata.size(); i < dpcmaddr + dpcmoffset; i++)
         {
             if (ofs)
             {

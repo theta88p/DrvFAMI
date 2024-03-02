@@ -1,5 +1,4 @@
-#MAKE_NSF = 1
-
+MAKE_NSF = 1
 TOOL_PASS =	
 INC_PASS = 
 LIB_PASS =
@@ -32,6 +31,8 @@ CFLAGS  = -t none --listing $*.lst --list-bytes 255 -g -c -o
 #;  Assembler
 AS      = $(TOOL_PASS)ca65
 ASFLAGS = -t none --listing $*.lst --list-bytes 255 -g
+ASFLAGS1 = -t none --listing $*.lst --list-bytes 255 -g -D MMC5=1 -o drv_mmc5.o
+ASFLAGS2 = -t none --listing $*.lst --list-bytes 255 -g -D VRC6=1 -o drv_vrc6.o
 
 #---------------
 #;  Archiver
@@ -59,6 +60,11 @@ CP      = copy
 %.o : %.s $(INC_FILES)			#;".inc"ファイルが更新された場合は、.sは、全部アセンブルする。
 	@echo [Assemble] : $< >>$(ERRLOG_FILE)
 	$(AS) $(ASFLAGS) $< 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	@echo [Assemble] : drv.s >>$(ERRLOG_FILE)
+	$(AS) drv.s $(ASFLAGS1) 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	@echo [Assemble] : drv.s >>$(ERRLOG_FILE)
+	$(AS) drv.s $(ASFLAGS2) 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+
 
 %.s : %.mml $(DMC_FILES)		#;".dmc"ファイルが更新された場合は、.mmlは、全部コンパイルする。
 	@echo ======================================================== >>$(LOG_FILE)
@@ -66,61 +72,6 @@ CP      = copy
 	@echo ======================================================== >>$(LOG_FILE)
 	@echo [Compile] : $< >>$(ERRLOG_FILE)
 	$(MC) $(MCFLAGS) $< 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
-
-
-
-########################################
-#;	Source files
-########################################
-
-ifdef MAKE_NSF
-#---------------
-#; プロジェクト名
-MAIN_PROJ  =	drv.bin
-
-#---------------
-#; リンカーの設定
-CFG_FILE   =	nsf.cfg
-MAP_FILE   =	test.map
-DBG_FILE   =	test.dbg
-
-#---------------
-#; ソースファイル
-MAIN_FILES =	nsf.o	\
-		crt0_nsf.o		\
-		main_nsf.o		\
-		drv.o			\
-		data_nsf.o		\
-
-else
-
-#---------------
-#; プロジェクト名
-MAIN_PROJ  =	test.nes
-
-#---------------
-#; リンカーの設定
-CFG_FILE   =	nesa.cfg
-MAP_FILE   =	test.map
-DBG_FILE   =	test.dbg
-
-#---------------
-#; ソースファイル
-MAIN_FILES =	ines.o	\
-		crt0_nes.o		\
-		nmi_main_nes.o	\
-		irq_main.o		\
-		main_nes.o		\
-		drv.o			\
-		data_nes.o		\
-		dsp.o		\
-		
-endif
-
-CHR_FILRS  =
-
-MML_FILES  =
-
 
 #---------------------------------------
 #;	Header files
@@ -148,19 +99,63 @@ LIB_FILES =
 #;	Build process
 ########################################
 
+ifdef MAKE_NSF
+
+#---------------
+#; リンカーの設定
+CFG_FILE   =	nsf.cfg
+MAP_FILE   =	drv.map
+DBG_FILE   =	drv.dbg
+
+#---------------
+#; ソースファイル
+MAIN_FILES =	main_nsf.o		\
+				nsf.o			\
+				crt0_nsf.o		\
+				data_nsf.o		\
+
 .PHONY: all clean
 
 #---------------
-#; Default Target（ここに、ビルドするプロジェクトの一覧を記述する。）
-all: $(MAIN_PROJ)
-
-
-#---------------
 #; build of main program
-$(MAIN_PROJ) : $(MAIN_FILES) $(CHR_FILES) $(MML_FILES) $(LIB_FILES)
+all : drv.bin drv_mmc5.bin drv_vrc6.bin
+
+drv.bin : drv.o $(MAIN_FILES) $(CHR_FILES) 
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
 	$(LINKER) $(LDFLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
+drv_mmc5.bin : drv_mmc5.o $(MAIN_FILES) $(CHR_FILES) 
+	@echo [Link] : $@ >>$(ERRLOG_FILE)
+	$(LINKER) $(LDFLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+
+drv_vrc6.bin : drv_vrc6.o $(MAIN_FILES) $(CHR_FILES) 
+	@echo [Link] : $@ >>$(ERRLOG_FILE)
+	$(LINKER) $(LDFLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+
+else
+
+#---------------
+#; リンカーの設定
+CFG_FILE   =	nesa.cfg
+MAP_FILE   =	test.map
+DBG_FILE   =	test.dbg
+
+#---------------
+#; ソースファイル
+MAIN_FILES =	ines.o	\
+		crt0_nes.o		\
+		nmi_main_nes.o	\
+		irq_main.o		\
+		main_nes.o		\
+		drv.o			\
+		data_nes.o		\
+		dsp.o		\
+
+dsp.bin : $(MAIN_FILES) $(CHR_FILES) 
+	@echo [Link] : $@ >>$(ERRLOG_FILE)
+	$(LINKER) $(LDFLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+
+endif
 
 #---------------
 #; Crean up
