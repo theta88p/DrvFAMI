@@ -732,8 +732,10 @@ __hh:		.byte	0		; 時
 		bne leb
 		clc
 		lda InfLoopAddr_L, x			;無限ループアドレスが設定されていればジャンプ
-		adc InfLoopAddr_H, x
+		bne @N
+		lda InfLoopAddr_H, x
 		beq @E
+	@N:
 		lda InfLoopAddr_L, x
 		sta Ptr_L, x
 		lda InfLoopAddr_H, x
