@@ -1,6 +1,10 @@
 #include "FileWriter.h"
 
-static unsigned char nsfhead[]{
+static char neshead[]{
+    0x4e, 0x45, 0x53, 0x1a, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static char nsfhead[]{
     0x4e, 0x45, 0x53, 0x4d, 0x1a, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -10,6 +14,7 @@ static unsigned char nsfhead[]{
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4e, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
+
 
 FileWriter::FileWriter()
 {
@@ -58,11 +63,14 @@ void FileWriter::createNes()
     std::ifstream ifs;
     std::wstring dir;
     Utils::GetModuleDir(dir);
+    std::wstring drv = dir + L"bin\\dsp_code.bin";
+    std::wstring data = dir + L"bin\\dsp_data.bin";
+    auto drvsize = Utils::GetFileSize(drv);
 
-    ifs.open(dir + L"bin\\dsp.bin", std::ifstream::in | std::ifstream::binary);
+    ifs.open(drv, std::ifstream::in | std::ifstream::binary);
     if (!ifs)
     {
-        std::cerr << "Faild to open dsp.bin." << std::endl;
+        std::cerr << "Faild to open dsp_code.bin." << std::endl;
         exit(1);
     }
 
@@ -75,20 +83,33 @@ void FileWriter::createNes()
     }
 
     char c;
-    int offset = 0x10;
-    int dpcmaddr = 0x4000 + offset;
-    int seqaddr = 0x16e0;
-    int vectoraddr = 0x8000;
-    int maxfilesize = 0x7ff0;
+    int nesheadsize = 0x10;
+    int dpcmaddr = 0x4000 + nesheadsize;
+    int vectoraddr = 0x7ffa + nesheadsize;
+    int maxfilesize = 0x7ff0 + nesheadsize;
 
-    if (seqaddr + seqdata.size() > dpcmaddr + dpcmoffset)
+
+    if (nesheadsize + drvsize + seqdata.size() > dpcmaddr + dpcmoffset)
     {
         std::cerr << "Sequence data size has reached maximum." << std::endl;
-        std::cerr << "Seq data : " << seqdata.size() << " bytes, Max : " << dpcmaddr + dpcmoffset - seqaddr << " bytes" << std::endl;
+        std::cerr << "Seq data : " << seqdata.size() << " bytes, Max : " << dpcmaddr + dpcmoffset - (nesheadsize + drvsize) << " bytes" << std::endl;
         exit(1);
     }
 
-    for (int i = 0; i < seqaddr; i++)
+    for (const auto& h : neshead)
+    {
+        if (ofs)
+        {
+            ofs.write(&h, sizeof(char));
+        }
+        else
+        {
+            std::cerr << "Faild to write file." << std::endl;
+            exit(1);
+        }
+    }
+
+    for (int i = 0; i < drvsize; i++)
     {
         if (ifs && ofs)
         {
@@ -102,11 +123,13 @@ void FileWriter::createNes()
         }
     }
 
-    for (int i = 0; i < seqdata.size(); i++)
+    ifs.close();
+
+    for (const auto& s : seqdata)
     {
         if (ofs)
         {
-            ofs.write((const char*)&seqdata[i], sizeof(char));
+            ofs.write((const char*)&s, sizeof(char));
         }
         else
         {
@@ -115,11 +138,11 @@ void FileWriter::createNes()
         }
     }
 
-    for (int i = seqaddr + seqdata.size(); i < dpcmaddr; i++)
+    c = 0;
+    for (int i = nesheadsize + drvsize + seqdata.size(); i < dpcmaddr; i++)
     {
         if (ofs)
         {
-            c = 0;
             ofs.write(&c, sizeof(char));
         }
         else
@@ -165,11 +188,11 @@ void FileWriter::createNes()
         ifsd.close();
     }
 
+    c = 0;
     for (int i = dpcmaddr + dpcmsize; i < vectoraddr; i++)
     {
         if (ofs)
         {
-            c = 0;
             ofs.write(&c, sizeof(char));
         }
         else
@@ -179,14 +202,20 @@ void FileWriter::createNes()
         }
     }
 
-    ifs.seekg(vectoraddr);
+    std::ifstream ifsc;
+    ifsc.open(data, std::ifstream::in | std::ifstream::binary);
+    if (!ifs)
+    {
+        std::cerr << "Faild to open dsp_data.bin." << std::endl;
+        exit(1);
+    }
 
     while (true)
     {
-        if (ifs && ofs)
+        if (ifsc && ofs)
         {
-            ifs.read(&c, sizeof(char));
-            if (!ifs.eof())
+            ifsc.read(&c, sizeof(char));
+            if (!ifsc.eof())
             {
                 ofs.write(&c, sizeof(char));
             }
@@ -202,6 +231,7 @@ void FileWriter::createNes()
         }
     }
 
+    ifsc.close();
     ofs.close();
 }
 
@@ -305,11 +335,11 @@ void FileWriter::createNsf()
         }
     }
 
-    for (int i = 0; i < nsfheadsize; i++)
+    for (const auto& h : nsfhead)
     {
         if (ofs)
         {
-            ofs.write((const char*)&nsfhead[i], sizeof(char));
+            ofs.write(&h, sizeof(char));
         }
         else
         {
@@ -346,11 +376,11 @@ void FileWriter::createNsf()
         exit(1);
     }
 
-    for (int i = 0; i < seqdata.size(); i++)
+    for (const auto& s : seqdata)
     {
         if (ofs)
         {
-            ofs.write((const char*)&seqdata[i], sizeof(char));
+            ofs.write((const char*)&s, sizeof(char));
         }
         else
         {

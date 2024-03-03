@@ -30,8 +30,6 @@ CFLAGS  = -t none --listing $*.lst --list-bytes 255 -g -c -o
 #;  Assembler
 AS      = $(TOOL_PASS)ca65
 ASFLAGS = -t none --listing $*.lst --list-bytes 255 -g
-ASFLAGS1 = -t none --listing $*.lst --list-bytes 255 -g -D MMC5=1 -o drv_mmc5.o
-ASFLAGS2 = -t none --listing $*.lst --list-bytes 255 -g -D VRC6=1 -o drv_vrc6.o
 
 #---------------
 #;  Archiver
@@ -61,9 +59,9 @@ CP      = copy
 	@echo [Assemble] : $< >>$(ERRLOG_FILE)
 	$(AS) $(ASFLAGS) $< 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 	@echo [Assemble] : drv.s >>$(ERRLOG_FILE)
-	$(AS) drv.s $(ASFLAGS1) 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	$(AS) drv.s $(ASFLAGS) -D MMC5=1 -o drv_mmc5.o 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 	@echo [Assemble] : drv.s >>$(ERRLOG_FILE)
-	$(AS) drv.s $(ASFLAGS2) 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	$(AS) drv.s $(ASFLAGS) -D VRC6=1 -o drv_vrc6.o 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
 
 %.s : %.mml $(DMC_FILES)		#;".dmc"ファイルが更新された場合は、.mmlは、全部コンパイルする。
