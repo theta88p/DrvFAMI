@@ -36,59 +36,32 @@ PAOctave:		.res	3	;エンベロープ適用後オクターブ（DSP用）
 DMA = $0700
 
 CH1 = 0
-CH2 = CH1 + 28
-CH3 = CH2 + 28
-CH4 = CH3 + 24
-CH5 = CH4 + 16
-TIME = CH5 + 12
+CH2 = CH1 + 12
+CH3 = CH2 + 12
+CH4 = CH3 + 4
+CH5 = CH4 + 12
 
 CH1KEY		=	DMA + 0
 CH1VOL1		=	DMA + 4
 CH1VOL2		=	DMA + 8
-CH1DUTY		=	DMA + 12
-CH1OCT		=	DMA + 16
-CH1NOTE		=	DMA + 20
-CH1SHARP	=	DMA + 24
 
 CH2KEY		=	DMA + CH2 + 0
 CH2VOL1		=	DMA + CH2 + 4
 CH2VOL2		=	DMA + CH2 + 8
-CH2DUTY		=	DMA + CH2 + 12
-CH2OCT		=	DMA + CH2 + 16
-CH2NOTE		=	DMA + CH2 + 20
-CH2SHARP	=	DMA + CH2 + 24
 
 CH3KEY		=	DMA + CH3 + 0
-CH3VOL1		=	DMA + CH3 + 4
-CH3VOL2		=	DMA + CH3 + 8
-CH3OCT		=	DMA + CH3 + 12
-CH3NOTE		=	DMA + CH3 + 16
-CH3SHARP	=	DMA + CH3 + 20
 
 CH4KEY		=	DMA + CH4 + 0
 CH4VOL1		=	DMA + CH4 + 4
 CH4VOL2		=	DMA + CH4 + 8
-CH4TONE		=	DMA + CH4 + 12
 
 CH5KEY		=	DMA + CH5 + 0
-CH5VOL1		=	DMA + CH5 + 4
-CH5VOL2		=	DMA + CH5 + 8
-
-TIMEMM1		=	DMA + TIME + 0
-TIMEMM2		=	DMA + TIME + 4
-TIMESS1		=	DMA + TIME + 8
-TIMESS2		=	DMA + TIME + 12
-TIMECC1		=	DMA + TIME + 16
-TIMECC2		=	DMA + TIME + 20
 
 YPOS1 = $2F
 YPOS2 = $4F
 YPOS3 = $6F
 YPOS4 = $8F
 YPOS5 = $A7
-
-TIME_XPOS = $98
-TIME_YPOS = $18
 
 .code
 
@@ -99,30 +72,47 @@ TIME_YPOS = $18
 		sta DspWork
 		lda __cc
 		jsr rem
-		adc #$30
-		sta TIMECC2 + 1
+		tax
+		lda #$20
+		sta $2006
+		lda #$79
+		sta $2006
 		tya
 		adc #$30
-		sta TIMECC1 + 1
+		sta $2007
+		txa
+		adc #$30
+		sta $2007
 		lda __cc
 		bne ch01				;0になった（繰り上がった）時だけ書き換える
 		lda __ss
 		jsr rem
-		adc #$30
-		sta TIMESS2 + 1
+		tax
+		lda #$20
+		sta $2006
+		lda #$76
+		sta $2006
 		tya
 		adc #$30
-		sta TIMESS1 + 1
+		sta $2007
+		txa
+		adc #$30
+		sta $2007
 		lda __ss
 		bne ch01
 		lda __mm
 		jsr rem
-		clc
-		adc #$30
-		sta TIMEMM2 + 1
+		tax
+		lda #$20
+		sta $2006
+		lda #$73
+		sta $2006
 		tya
 		adc #$30
-		sta TIMEMM1 + 1
+		sta $2007
+		txa
+		adc #$30
+		sta $2007
 	;----------------ch1----------------
 	ch01:
 		lda #0
@@ -154,7 +144,7 @@ TIME_YPOS = $18
 		sta DspWork + 2
 		lda PANote + 0
 		sta DspWork + 3
-		jmp @note
+		jmp @pos
 	@f2n:
 		jsr freq2note
 		lda DspWork + 2
@@ -165,30 +155,6 @@ TIME_YPOS = $18
 		sta PAFreq_L + 0
 		lda Freq_H, x
 		sta PAFreq_H + 0
-	@note:
-		lda DspWork + 3
-		tay
-		lda halftone, y
-		bne @half
-		lda #$ff
-		sta CH1SHARP + 0			;シャープ記号
-		lda DspWork + 3
-		cmp #4
-		beq @sqr
-		cmp #11
-		beq @sqr
-		lda #$5d
-		jmp @write
-	@sqr:
-		lda #$5c
-	@write:
-		sta CH1KEY + 1			;ハイライト鍵盤の形
-		jmp @pos
-	@half:
-		lda #$5e
-		sta CH1KEY + 1			;ハイライト鍵盤の形
-		lda #YPOS1 + 8
-		sta CH1SHARP + 0		;シャープ記号
 	;鍵盤の位置計算
 	@pos:
 		lda #0
@@ -235,18 +201,50 @@ TIME_YPOS = $18
 		sta CH1VOL2 + 0
 	;Duty
 	@duty:
+		lda #$20
+		sta $2006
+		lda #$d5
+		sta $2006
 		lda Tone, x
 		clc
 		adc #$2b
-		sta CH1DUTY + 1		;Duty比のスプライト形状
+		sta $2007
 	;ノートナンバー表示
 	;@notenum:
+		lda #$20
+		sta $2006
+		lda #$e7
+		sta $2006
 		lda DspWork + 2
 		clc
 		adc #$30
-		sta CH1OCT + 1		;オクターブ番号
+		sta $2007				;オクターブ番号
 		lda charmap, y
-		sta CH1NOTE + 1		;音名
+		sta $2007				;音名
+	@note:
+		lda DspWork + 3
+		tay
+		lda halftone, y
+		bne @half
+		lda #$02
+		sta $2007				;シャープ記号
+		lda DspWork + 3
+		cmp #4
+		beq @sqr
+		cmp #11
+		beq @sqr
+		lda #$5d
+		jmp @write
+	@sqr:
+		lda #$5c
+	@write:
+		sta CH1KEY + 1			;ハイライト鍵盤の形
+		jmp ch02
+	@half:
+		lda #$3b
+		sta $2007				;シャープ記号
+		lda #$5e
+		sta CH1KEY + 1			;ハイライト鍵盤の形
 
 	;----------------ch2----------------
 	ch02:
@@ -279,7 +277,7 @@ TIME_YPOS = $18
 		sta DspWork + 2
 		lda PANote + 1
 		sta DspWork + 3
-		jmp @note
+		jmp @pos
 	@f2n:
 		jsr freq2note
 		lda DspWork + 2
@@ -290,30 +288,6 @@ TIME_YPOS = $18
 		sta PAFreq_L + 1
 		lda Freq_H, x
 		sta PAFreq_H + 1
-	@note:
-		lda DspWork + 3
-		tay
-		lda halftone, y
-		bne @half
-		lda #$ff
-		sta CH2SHARP + 0			;シャープ記号
-		lda DspWork + 3
-		cmp #4
-		beq @sqr
-		cmp #11
-		beq @sqr
-		lda #$5d
-		jmp @write
-	@sqr:
-		lda #$5c
-	@write:
-		sta CH2KEY + 1			;ハイライト鍵盤の形
-		jmp @pos
-	@half:
-		lda #$5e
-		sta CH2KEY + 1			;ハイライト鍵盤の形
-		lda #YPOS2 + 8
-		sta CH1SHARP + 0		;シャープ記号
 	;鍵盤の位置計算
 	@pos:
 		lda #0
@@ -360,18 +334,50 @@ TIME_YPOS = $18
 		sta CH2VOL2 + 0
 	;Duty
 	@duty:
+		lda #$21
+		sta $2006
+		lda #$55
+		sta $2006
 		lda Tone, x
 		clc
 		adc #$2b
-		sta CH2DUTY + 1		;Duty比のスプライト形状
+		sta $2007
 	;ノートナンバー表示
 	;@notenum:
+		lda #$21
+		sta $2006
+		lda #$67
+		sta $2006
 		lda DspWork + 2
 		clc
 		adc #$30
-		sta CH2OCT + 1		;オクターブ番号
+		sta $2007				;オクターブ番号
 		lda charmap, y
-		sta CH2NOTE + 1		;音名
+		sta $2007				;音名
+	@note:
+		lda DspWork + 3
+		tay
+		lda halftone, y
+		bne @half
+		lda #$02
+		sta $2007				;シャープ記号
+		lda DspWork + 3
+		cmp #4
+		beq @sqr
+		cmp #11
+		beq @sqr
+		lda #$5d
+		jmp @write
+	@sqr:
+		lda #$5c
+	@write:
+		sta CH2KEY + 1			;ハイライト鍵盤の形
+		jmp ch03
+	@half:
+		lda #$3b
+		sta $2007				;シャープ記号
+		lda #$5e
+		sta CH2KEY + 1			;ハイライト鍵盤の形
 
 	;----------------ch3----------------
 	ch03:
@@ -387,9 +393,13 @@ TIME_YPOS = $18
 		beq @keyon
 		lda #$ff
 		sta CH3KEY + 0
-		lda #YPOS3
-		sta CH3VOL1 + 0
-		sta CH3VOL2 + 0
+		lda #$21
+		sta $2006
+		lda #$d1
+		sta $2006
+		lda #$02
+		sta $2007
+		sta $2007
 		jmp ch04
 	;発音中の場合
 	@keyon:
@@ -403,7 +413,7 @@ TIME_YPOS = $18
 		sta DspWork + 2
 		lda PANote + 2
 		sta DspWork + 3
-		jmp @note
+		jmp @pos
 	@f2n:
 		jsr freq2note
 		lda DspWork + 2
@@ -414,30 +424,6 @@ TIME_YPOS = $18
 		sta PAFreq_L + 2
 		lda Freq_H, x
 		sta PAFreq_H + 2
-	@note:
-		lda DspWork + 3
-		tay
-		lda halftone, y
-		bne @half
-		lda #$ff
-		sta CH3SHARP + 0			;シャープ記号
-		lda DspWork + 3
-		cmp #4
-		beq @sqr
-		cmp #11
-		beq @sqr
-		lda #$5d
-		jmp @write
-	@sqr:
-		lda #$5c
-	@write:
-		sta CH3KEY + 1			;ハイライト鍵盤の形
-		jmp @pos
-	@half:
-		lda #$5e
-		sta CH3KEY + 1			;ハイライト鍵盤の形
-		lda #YPOS3 + 8
-		sta CH1SHARP + 0		;シャープ記号
 	;鍵盤の位置計算
 	@pos:
 		lda #0
@@ -456,17 +442,49 @@ TIME_YPOS = $18
 		sta CH3KEY + 0
 	;音量バー
 	;@volume:
-		lda #$ff
-		sta CH3VOL1 + 0
-		sta CH3VOL2 + 0
+		lda #$21
+		sta $2006
+		lda #$d1
+		sta $2006
+		lda #$29
+		sta $2007
+		sta $2007
 	;ノートナンバー表示
-	@notenum:
+	;@notenum:
+		lda #$21
+		sta $2006
+		lda #$e7
+		sta $2006
 		lda DspWork + 2
 		clc
-		adc #$2f			;三角波は1オクターブ低く表示
-		sta CH3OCT + 1		;オクターブ番号
+		adc #$2f				;三角波は1オクターブ低く表示
+		sta $2007				;オクターブ番号
 		lda charmap, y
-		sta CH3NOTE + 1		;音名
+		sta $2007				;音名
+	@note:
+		lda DspWork + 3
+		tay
+		lda halftone, y
+		bne @half
+		lda #$02
+		sta $2007				;シャープ記号
+		lda DspWork + 3
+		cmp #4
+		beq @sqr
+		cmp #11
+		beq @sqr
+		lda #$5d
+		jmp @write
+	@sqr:
+		lda #$5c
+	@write:
+		sta CH3KEY + 1			;ハイライト鍵盤の形
+		jmp ch04
+	@half:
+		lda #$3b
+		sta $2007				;シャープ記号
+		lda #$5e
+		sta CH3KEY + 1			;ハイライト鍵盤の形
 
 	;----------------ch4----------------
 	ch04:
@@ -536,14 +554,18 @@ TIME_YPOS = $18
 		sta CH4VOL2 + 0
 	;音色
 	@tone:
+		lda #$22
+		sta $2006
+		lda #$4f
+		sta $2006
 		lda Tone, x
 		bne @p
 		lda #$43
-		sta CH4TONE + 1
+		sta $2007
 		jmp ch05
 	@p:
 		lda #$45
-		sta CH4TONE + 1
+		sta $2007
 	
 	;----------------ch5----------------
 	ch05:
@@ -557,14 +579,25 @@ TIME_YPOS = $18
 		lda $4015
 		and #%00010000					;DPCM再生bitを直接読む
 		bne @keyon
-		lda #YPOS5
-		sta CH5VOL1 + 0
-		sta CH5VOL2 + 0
+		lda #$22
+		sta $2006
+		lda #$ac
+		sta $2006
+		lda #$02
+		sta $2007
+		sta $2007
 		lda #$ff
 		sta CH5KEY + 0
 		jmp end
 	;発音中の場合
 	@keyon:
+		lda #$22
+		sta $2006
+		lda #$ac
+		sta $2006
+		lda #$29
+		sta $2007
+		sta $2007
 		lda #YPOS5 + 8
 		sta CH5KEY + 0				;ハイライト鍵盤を表示
 	;鍵盤の位置計算
@@ -582,9 +615,6 @@ TIME_YPOS = $18
 		bne @L
 		adc #$58
 		sta CH5KEY + 3				;ハイライト鍵盤の位置
-		lda #$ff
-		sta CH5VOL1 + 0				;音量バー隠しのスプライト非表示1
-		sta CH5VOL2 + 0				;音量バー隠しのスプライト非表示2
 	end:
 		rts
 .endproc
@@ -635,6 +665,17 @@ TIME_YPOS = $18
 		sta DMA, x
 		dex
 		bne init
+		;スプライト非表示
+		lda #$ff
+		ldx #$ff
+	inv:
+		sta DMA, x
+		dex
+		dex
+		dex
+		dex
+		cpx #15
+		bcs inv
 		;スプライト転送
 		lda #$07
 		sta $4014
@@ -689,15 +730,20 @@ TIME_YPOS = $18
 		;:
 		lda #$20
 		sta $2006
-		lda #$75
+		lda #$73
 		sta $2006
+		lda #$30
+		sta $2007
+		sta $2007
 		lda #$3a
 		sta $2007
-		lda #$20
-		sta $2006
-		lda #$78
-		sta $2006
+		lda #$30
+		sta $2007
+		sta $2007
 		lda #$3a
+		sta $2007
+		lda #$30
+		sta $2007
 		sta $2007
 		;ch01
 		lda #$20
@@ -716,6 +762,10 @@ TIME_YPOS = $18
 		lda #$e6
 		sta $2006
 		lda #$44
+		sta $2007
+		lda #$30
+		sta $2007
+		lda #$3e
 		sta $2007
 		lda #$21
 		sta $2006
@@ -739,6 +789,10 @@ TIME_YPOS = $18
 		lda #$66
 		sta $2006
 		lda #$44
+		sta $2007
+		lda #$30
+		sta $2007
+		lda #$3e
 		sta $2007
 		lda #$21
 		sta $2006
@@ -766,14 +820,15 @@ TIME_YPOS = $18
 		bcc @L2
 		lda #$28
 		sta $2007
-		lda #$29
-		sta $2007
-		sta $2007
 		lda #$21
 		sta $2006
 		lda #$e6
 		sta $2006
 		lda #$44
+		sta $2007
+		lda #$30
+		sta $2007
+		lda #$3e
 		sta $2007
 		lda #$22
 		sta $2006
@@ -833,9 +888,6 @@ TIME_YPOS = $18
 		sta $2007
 		lda #$28
 		sta $2007
-		lda #$29
-		sta $2007
-		sta $2007
 		lda #$22
 		sta $2006
 		lda #$c6
@@ -872,47 +924,43 @@ TIME_YPOS = $18
 		sta $2006
 		lda #$c0
 		sta $2006
-		lda #$55
+		lda #$00
 		ldx #8
 	attr:
 		sta $2007
 		dex
 		bne attr
-		lda #$00
+		lda #$55
 		ldx #$18
 	@L1:
 		sta $2007
 		dex
 		bne @L1
-		
-		ldx #2
-		lda #$00
+		lda #$55
 		sta $2007
 		sta $2007
-		lda #$80
+		lda #$95
 		sta $2007
-		lda #$a0
+		lda #$a5
 		sta $2007
 		sta $2007
 		sta $2007
 		sta $2007
-		lda #$00
-		sta $2007
-
-		lda #$00
+		lda #$55
 		sta $2007
 		sta $2007
-		lda #$88
+		sta $2007
+		lda #$99
 		sta $2007
 		lda #$aa
 		sta $2007
 		sta $2007
 		sta $2007
 		sta $2007
-		lda #$00
+		lda #$55
 		sta $2007
 		
-		lda #$00
+		lda #$aa
 		ldx #$08
 	@L3:
 		sta $2007
@@ -923,11 +971,8 @@ TIME_YPOS = $18
 		;非表示にするもの
 		lda #$ff
 		sta CH1KEY + 0
-		sta CH1SHARP + 0
 		sta CH2KEY + 0
-		sta CH2SHARP + 0
 		sta CH3KEY + 0
-		sta CH3SHARP + 0
 		sta CH4KEY + 0
 		sta CH5KEY + 0
 
@@ -935,126 +980,35 @@ TIME_YPOS = $18
 		lda #YPOS1
 		sta CH1VOL1 + 0
 		sta CH1VOL2 + 0
-		sta CH1DUTY + 0
-		
-		lda #YPOS1 + 8
-		sta CH1OCT + 0
-		sta CH1NOTE + 0
 		
 		lda #$02
 		sta CH1VOL1 + 1
 		sta CH1VOL2 + 1
 		
-		lda #$30
-		sta CH1OCT + 1
-		lda #$3e
-		sta CH1NOTE + 1
-		lda #$3b
-		sta CH1SHARP + 1
-		
-		lda #$01
-		sta CH1DUTY + 2
-		sta CH1OCT + 2
-		sta CH1NOTE + 2
-		sta CH1SHARP + 2
-
 		lda #$88
 		sta CH1VOL1 + 3
 		lda #$90
 		sta CH1VOL2 + 3
 		
-		lda #$a8
-		sta CH1DUTY + 3
-		lda #$37
-		sta CH1OCT + 3
-		lda #$3f
-		sta CH1NOTE + 3
-		lda #$47
-		sta CH1SHARP + 3
-		
 		;ch2
 		lda #YPOS2
 		sta CH2VOL1 + 0
 		sta CH2VOL2 + 0
-		sta CH2DUTY + 0
-		
-		lda #YPOS2 + 8
-		sta CH2OCT + 0
-		sta CH2NOTE + 0
 		
 		lda #$02
 		sta CH2VOL1 + 1
 		sta CH2VOL2 + 1
 		
-		lda #$30
-		sta CH2OCT + 1
-		lda #$3e
-		sta CH2NOTE + 1
-		lda #$3b
-		sta CH2SHARP + 1
-		
-		lda #$01
-		sta CH2DUTY + 2
-		sta CH2OCT + 2
-		sta CH2NOTE + 2
-		sta CH2SHARP + 2
-
 		lda #$88
 		sta CH2VOL1 + 3
 		lda #$90
 		sta CH2VOL2 + 3
 		
-		lda #$a8
-		sta CH2DUTY + 3
-		lda #$37
-		sta CH2OCT + 3
-		lda #$3f
-		sta CH2NOTE + 3
-		lda #$47
-		sta CH2SHARP + 3
-		
 		;ch3
-		lda #YPOS3
-		sta CH3VOL1 + 0
-		sta CH3VOL2 + 0
-		
-		lda #YPOS3 + 8
-		sta CH3OCT + 0
-		sta CH3NOTE + 0
-		
-		lda #$02
-		sta CH3VOL1 + 1
-		sta CH3VOL2 + 1
-		
-		lda #$30
-		sta CH3OCT + 1
-		lda #$3e
-		sta CH3NOTE + 1
-		lda #$3b
-		sta CH3SHARP + 1
-		
-		lda #$01
-		sta CH3OCT + 2
-		sta CH3NOTE + 2
-		sta CH3SHARP + 2
-
-		lda #$88
-		sta CH3VOL1 + 3
-		lda #$90
-		sta CH3VOL2 + 3
-		
-		lda #$37
-		sta CH3OCT + 3
-		lda #$3f
-		sta CH3NOTE + 3
-		lda #$47
-		sta CH3SHARP + 3
-
 		;ch4
 		lda #YPOS4
 		sta CH4VOL1 + 0
 		sta CH4VOL2 + 0
-		sta CH4TONE + 0
 		
 		lda #$5f
 		sta CH4KEY + 1
@@ -1062,67 +1016,14 @@ TIME_YPOS = $18
 		sta CH4VOL1 + 1
 		sta CH4VOL2 + 1
 		
-		lda #$01
-		sta CH4TONE + 2
-		
 		lda #$60
 		sta CH4VOL1 + 3
 		lda #$68
 		sta CH4VOL2 + 3
-		lda #$78
-		sta CH4TONE + 3
 		
 		;ch5
-		lda #YPOS5
-		sta CH5VOL1 + 0
-		sta CH5VOL2 + 0
-		
 		lda #$5f
 		sta CH5KEY + 1
-		lda #$02
-		sta CH5VOL1 + 1
-		sta CH5VOL2 + 1
-		
-		lda #$60
-		sta CH5VOL1 + 3
-		lda #$68
-		sta CH5VOL2 + 3
-		
-		;Time
-		lda #TIME_YPOS
-		sta TIMEMM1 + 0
-		sta TIMEMM2 + 0
-		sta TIMESS1 + 0
-		sta TIMESS2 + 0
-		sta TIMECC1 + 0
-		sta TIMECC2 + 0
-		lda #$30
-		sta TIMEMM1 + 1
-		sta TIMEMM2 + 1
-		sta TIMESS1 + 1
-		sta TIMESS2 + 1
-		sta TIMECC1 + 1
-		sta TIMECC2 + 1
-		lda #$01
-		sta TIMEMM1 + 2
-		sta TIMEMM2 + 2
-		sta TIMESS1 + 2
-		sta TIMESS2 + 2
-		sta TIMECC1 + 2
-		sta TIMECC2 + 2
-		
-		lda #TIME_XPOS + 0
-		sta TIMEMM1 + 3
-		lda #TIME_XPOS + 8
-		sta TIMEMM2 + 3
-		lda #TIME_XPOS + 24
-		sta TIMESS1 + 3
-		lda #TIME_XPOS + 32
-		sta TIMESS2 + 3
-		lda #TIME_XPOS + 48
-		sta TIMECC1 + 3
-		lda #TIME_XPOS + 56
-		sta TIMECC2 + 3
 		
 		;スプライト転送
 		lda #$07

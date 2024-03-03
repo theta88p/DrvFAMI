@@ -10,7 +10,6 @@
 .import		DPCMinfo
 .import		BGM0
 .import		dsp_init
-.import		dsp_main
 
 .include	"drv.inc"
 
@@ -38,8 +37,6 @@ bgm_00:		.addr	BGM0
 	Loop:
 		lda sync
 		beq Loop
-		
-		jsr dsp_main
 		
 		jmp	Loop
 .endproc

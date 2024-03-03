@@ -3,6 +3,7 @@
 
 .importzp	sync
 .import		drv_main
+.import		dsp_main
 .import		__cc
 .import		__ss
 .import		__mm
@@ -28,9 +29,16 @@
 	lda #0
 	sta sync
 	
+	jsr dsp_main
+	
+	;スクロール位置
+	lda	#0
+	sta	$2005
+	sta	$2005
 	;スプライト転送
 	lda #$07
 	sta $4014
+
 	jsr drv_main
 	
 	

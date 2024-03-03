@@ -5,7 +5,7 @@
 .segment "MUSDATA"
 
 BGM0:
-	.byte	"SEQ"
+	;.byte	"SEQ"
 	;.incbin "test.bin"
 
 .segment "PCMDATA"
@@ -19,15 +19,15 @@ DPCMinfo:
 ; パレット
 .segment "RODATA"
 palette:
-	.byte	$0F, $0C, $1C, $30
-	.byte	$0F, $05, $00, $30
-	.byte	$0F, $0C, $05, $30
-	.byte	$0F, $13, $36, $30
+	.byte	$0f, $0f, $15, $30
+	.byte	$0f, $0c, $1c, $30
+	.byte	$0f, $0c, $05, $30
+	.byte	$0f, $13, $36, $30
 
-	.byte	$0F, $0C, $15, $25
-	.byte	$0F, $0C, $1C, $30
-	.byte	$0F, $27, $27, $27
-	.byte	$0F, $15, $25, $35
+	.byte	$0f, $0c, $15, $25
+	.byte	$0f, $0c, $1c, $30
+	.byte	$0f, $27, $27, $27
+	.byte	$0f, $15, $25, $35
 
 ; パターンテーブル
 .segment "CHARS"
