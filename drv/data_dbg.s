@@ -5,10 +5,16 @@
 .segment "MUSDATA"
 
 BGM0:
+	;.byte	"SEQ"
+	.incbin "test.bin"
 
 .segment "PCMDATA"
 
 DPCMinfo:
+	;.byte	"DPCM"
+	;.incbin "C:\Programs\mck\Mumml\prog\dmc\909kick3_v60.dmc"
+	;.incbin	"C:\Programs\mck\Mumml\prog\dmc\tight909kick_v60.dmc"
+	;.incbin "C:\Programs\mck\Mumml\prog\dmc\cowbell.dmc"
 
 ; パレット
 .segment "RODATA"

@@ -1,3 +1,5 @@
+#DEBUG = 1
+
 TOOL_PASS =	
 INC_PASS = 
 LIB_PASS =
@@ -103,7 +105,11 @@ CFG_NSF_FILE   =	nsf.cfg
 MAP_NSF_FILE   =	drv.map
 DBG_NSF_FILE   =	drv.dbg
 
-CFG_DSP_FILE   =	nesa.cfg
+ifdef DEBUG
+CFG_DSP_FILE   =	nesd.cfg
+else
+CFG_DSP_FILE   =	nes.cfg
+endif
 MAP_DSP_FILE   =	dsp.map
 DBG_DSP_FILE   =	dsp.dbg
 
@@ -114,6 +120,19 @@ MAIN_NSF_FILES =	main_nsf.o		\
 					crt0_nsf.o		\
 					data_nsf.o		\
 
+ifdef DEBUG
+
+MAIN_DSP_FILES =	ines.o			\
+					crt0_nes.o		\
+					nmi_main_nes.o	\
+					irq_main.o		\
+					main_nes.o		\
+					drv.o			\
+					data_dbg.o		\
+					dsp.o			\
+
+else
+
 MAIN_DSP_FILES =	ines.o			\
 					crt0_nes.o		\
 					nmi_main_nes.o	\
@@ -123,11 +142,24 @@ MAIN_DSP_FILES =	ines.o			\
 					data_nes.o		\
 					dsp.o			\
 
+endif
 
 .PHONY: all clean
 
+
 #---------------
 #; build of main program
+
+ifdef DEBUG
+
+all : dsp.nes
+
+dsp.nes : $(MAIN_DSP_FILES) $(CHR_FILES) 
+	@echo [Link] : $@ >>$(ERRLOG_FILE)
+	$(LINKER) $(LD_DSP_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+
+else
+
 all : drv.bin drv_mmc5.bin drv_vrc6.bin dsp.bin
 
 drv.bin : drv.o $(MAIN_NSF_FILES)
@@ -146,6 +178,7 @@ dsp.bin : $(MAIN_DSP_FILES) $(CHR_FILES)
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
 	$(LINKER) $(LD_DSP_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
+endif
 
 
 #---------------

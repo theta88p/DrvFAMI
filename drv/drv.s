@@ -11,10 +11,6 @@
 .export		drv_init
 .export		drv_sndreq
 .export		set_dpcm
-.export		__cc
-.export		__ss
-.export		__mm
-.export		__hh
 
 .include	"drv.inc"
 
@@ -102,11 +98,6 @@ DpcmAddr_L:		.res	1	;DPCMのデータがあるアドレスL
 DpcmAddr_H:		.res	1	;DPCMのデータがあるアドレスH
 DpcmOffset:		.res	1	;DPCMのデータまでのオフセット
 DpcmLength:		.res	1	;DPCMのデータ長
-
-__cc:		.byte	0		; 1/60単位
-__ss:		.byte	0		; 秒
-__mm:		.byte	0		; 分
-__hh:		.byte	0		; 時
 
 
 ;00～6b	:o0c～o8b	音長デフォ
