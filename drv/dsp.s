@@ -10,12 +10,16 @@
 .import		PrevFreq_L
 .import		PrevFreq_H
 .import		palette
-.import		__mm
-.import		__ss
-.import		__cc
 
 .export 	dsp_init
 .export 	dsp_main
+.export 	dsp_write
+.export		__c
+.export		__cc
+.export		__s
+.export		__ss
+.export		__m
+.export		__mm
 .export		sync
 
 .include 	"drv.inc"
@@ -23,15 +27,28 @@
 
 .zeropage
 
-sync:			.res	1
-DspWork:		.res	4
+__c:		.byte	$30
+__cc:		.byte	$30
+__s:		.byte	$30
+__ss:		.byte	$30
+__m:		.byte	$30
+__mm:		.byte	$30
+sync:		.byte	1
+DspWork:	.res	4
 
 .bss
 
+POctave:		.res	3
+PNote:			.res	3
+PSharp:			.res	3
+PTone:			.res	3
+PVolume:		.res	2
+
 PAFreq_L:		.res	3
 PAFreq_H:		.res	3
-PANote:			.res	3	;エンベロープ適用後ノートナンバー（DSP用）
-PAOctave:		.res	3	;エンベロープ適用後オクターブ（DSP用）
+PANote:			.res	2
+PAVolume:		.res	4
+CurTrack:		.res	1
 
 DMA = $0700
 
@@ -67,61 +84,17 @@ YPOS5 = $A7
 
 .proc dsp_main
 	start:
-		;時間表示
-		lda #10
-		sta DspWork
-		lda __cc
-		jsr rem
-		tax
-		lda #$20
-		sta $2006
-		lda #$79
-		sta $2006
-		tya
-		adc #$30
-		sta $2007
-		txa
-		adc #$30
-		sta $2007
-		lda __cc
-		bne ch01				;0になった（繰り上がった）時だけ書き換える
-		lda __ss
-		jsr rem
-		tax
-		lda #$20
-		sta $2006
-		lda #$76
-		sta $2006
-		tya
-		adc #$30
-		sta $2007
-		txa
-		adc #$30
-		sta $2007
-		lda __ss
-		bne ch01
-		lda __mm
-		jsr rem
-		tax
-		lda #$20
-		sta $2006
-		lda #$73
-		sta $2006
-		tya
-		adc #$30
-		sta $2007
-		txa
-		adc #$30
-		sta $2007
 	;----------------ch1----------------
 	ch01:
 		lda #0
+		sta CurTrack
 		sta DspWork
 		jsr gettrack
 		cmp #1
 		beq @exec
 		jmp ch02
 	@exec:
+		stx CurTrack
 		lda Frags, x
 		and #FRAG_SIL
 		beq @keyon
@@ -131,26 +104,23 @@ YPOS5 = $A7
 		sta CH1VOL1 + 3
 		lda #$90
 		sta CH1VOL2 + 3
+		lda #YPOS1
+		sta CH1VOL1 + 0
+		sta CH1VOL2 + 0
 		jmp ch02
 	;発音中の場合
 	@keyon:
+		lda #YPOS1 + 16			;ハイライト鍵盤を表示
+		sta CH1KEY + 0
 		lda PAFreq_H + 0
 		cmp Freq_H, x
 		bne @f2n
 		lda PAFreq_L + 0
 		cmp Freq_L, x
 		bne @f2n
-		lda PAOctave + 0
-		sta DspWork + 2
-		lda PANote + 0
-		sta DspWork + 3
-		jmp @pos
+		jmp @volume
 	@f2n:
 		jsr freq2note
-		lda DspWork + 2
-		sta PAOctave + 0
-		lda DspWork + 3
-		sta PANote + 0
 		lda Freq_L, x
 		sta PAFreq_L + 0
 		lda Freq_H, x
@@ -168,11 +138,43 @@ YPOS5 = $A7
 		ldy DspWork + 3
 		adc posmap, y
 		sta CH1KEY + 3			;ハイライト鍵盤の位置
-		lda #YPOS1 + 16
-		sta CH1KEY + 0
+	;ノートナンバー表示
+	;@notenum:
+		lda DspWork + 2
+		clc
+		adc #$30
+		sta POctave + 0				;オクターブ番号
+		lda charmap, y
+		sta PNote + 0				;音名
+	@note:
+		lda DspWork + 3
+		tay
+		lda halftone, y
+		bne @half
+		lda #$02
+		sta PSharp + 0				;シャープ記号
+		lda DspWork + 3
+		cmp #4
+		beq @sqr
+		cmp #11
+		beq @sqr
+		lda #$5d
+		jmp @write
+	@sqr:
+		lda #$5c
+	@write:
+		sta CH1KEY + 1			;ハイライト鍵盤の形
+		jmp @volume
+	@half:
+		lda #$3b
+		sta PSharp + 0				;シャープ記号
+		lda #$5e
+		sta CH1KEY + 1			;ハイライト鍵盤の形
 	;音量バー
-	;@volume:
+	@volume:
 		lda Volume, x
+		cmp PAVolume + 0
+		beq @duty
 		cmp #15
 		bcc @next1
 		lda #$ff
@@ -201,50 +203,10 @@ YPOS5 = $A7
 		sta CH1VOL2 + 0
 	;Duty
 	@duty:
-		lda #$20
-		sta $2006
-		lda #$d5
-		sta $2006
 		lda Tone, x
 		clc
 		adc #$2b
-		sta $2007
-	;ノートナンバー表示
-	;@notenum:
-		lda #$20
-		sta $2006
-		lda #$e7
-		sta $2006
-		lda DspWork + 2
-		clc
-		adc #$30
-		sta $2007				;オクターブ番号
-		lda charmap, y
-		sta $2007				;音名
-	@note:
-		lda DspWork + 3
-		tay
-		lda halftone, y
-		bne @half
-		lda #$02
-		sta $2007				;シャープ記号
-		lda DspWork + 3
-		cmp #4
-		beq @sqr
-		cmp #11
-		beq @sqr
-		lda #$5d
-		jmp @write
-	@sqr:
-		lda #$5c
-	@write:
-		sta CH1KEY + 1			;ハイライト鍵盤の形
-		jmp ch02
-	@half:
-		lda #$3b
-		sta $2007				;シャープ記号
-		lda #$5e
-		sta CH1KEY + 1			;ハイライト鍵盤の形
+		sta PTone + 0
 
 	;----------------ch2----------------
 	ch02:
@@ -255,6 +217,7 @@ YPOS5 = $A7
 		beq @exec
 		jmp ch03
 	@exec:
+		stx CurTrack
 		lda Frags, x
 		and #FRAG_SIL
 		beq @keyon
@@ -264,26 +227,23 @@ YPOS5 = $A7
 		sta CH2VOL1 + 3
 		lda #$90
 		sta CH2VOL2 + 3
+		lda #YPOS2
+		sta CH2VOL1 + 0
+		sta CH2VOL2 + 0
 		jmp ch03
 	;発音中の場合
 	@keyon:
+		lda #YPOS2 + 16			;ハイライト鍵盤を表示
+		sta CH2KEY + 0
 		lda PAFreq_H + 1
 		cmp Freq_H, x
 		bne @f2n
 		lda PAFreq_L + 1
 		cmp Freq_L, x
 		bne @f2n
-		lda PAOctave + 1
-		sta DspWork + 2
-		lda PANote + 1
-		sta DspWork + 3
-		jmp @pos
+		jmp @volume
 	@f2n:
 		jsr freq2note
-		lda DspWork + 2
-		sta PAOctave + 1
-		lda DspWork + 3
-		sta PANote + 1
 		lda Freq_L, x
 		sta PAFreq_L + 1
 		lda Freq_H, x
@@ -301,11 +261,43 @@ YPOS5 = $A7
 		ldy DspWork + 3
 		adc posmap, y
 		sta CH2KEY + 3			;ハイライト鍵盤の位置
-		lda #YPOS2 + 16
-		sta CH2KEY + 0
+	;ノートナンバー表示
+	;@notenum:
+		lda DspWork + 2
+		clc
+		adc #$30
+		sta POctave + 1				;オクターブ番号
+		lda charmap, y
+		sta PNote + 1				;音名
+	@note:
+		lda DspWork + 3
+		tay
+		lda halftone, y
+		bne @half
+		lda #$02
+		sta PSharp + 1			;シャープ記号
+		lda DspWork + 3
+		cmp #4
+		beq @sqr
+		cmp #11
+		beq @sqr
+		lda #$5d
+		jmp @write
+	@sqr:
+		lda #$5c
+	@write:
+		sta CH2KEY + 1			;ハイライト鍵盤の形
+		jmp @volume
+	@half:
+		lda #$3b
+		sta PSharp + 1				;シャープ記号
+		lda #$5e
+		sta CH2KEY + 1			;ハイライト鍵盤の形
 	;音量バー
-	;@volume:
+	@volume:
 		lda Volume, x
+		cmp PAVolume + 1
+		beq @duty
 		cmp #15
 		bcc @next1
 		lda #$ff
@@ -334,50 +326,10 @@ YPOS5 = $A7
 		sta CH2VOL2 + 0
 	;Duty
 	@duty:
-		lda #$21
-		sta $2006
-		lda #$55
-		sta $2006
 		lda Tone, x
 		clc
 		adc #$2b
-		sta $2007
-	;ノートナンバー表示
-	;@notenum:
-		lda #$21
-		sta $2006
-		lda #$67
-		sta $2006
-		lda DspWork + 2
-		clc
-		adc #$30
-		sta $2007				;オクターブ番号
-		lda charmap, y
-		sta $2007				;音名
-	@note:
-		lda DspWork + 3
-		tay
-		lda halftone, y
-		bne @half
-		lda #$02
-		sta $2007				;シャープ記号
-		lda DspWork + 3
-		cmp #4
-		beq @sqr
-		cmp #11
-		beq @sqr
-		lda #$5d
-		jmp @write
-	@sqr:
-		lda #$5c
-	@write:
-		sta CH2KEY + 1			;ハイライト鍵盤の形
-		jmp ch03
-	@half:
-		lda #$3b
-		sta $2007				;シャープ記号
-		lda #$5e
-		sta CH2KEY + 1			;ハイライト鍵盤の形
+		sta PTone + 1
 
 	;----------------ch3----------------
 	ch03:
@@ -388,38 +340,28 @@ YPOS5 = $A7
 		beq @exec
 		jmp ch04
 	@exec:
+		stx CurTrack
 		lda Frags, x
 		and #FRAG_SIL
 		beq @keyon
 		lda #$ff
 		sta CH3KEY + 0
-		lda #$21
-		sta $2006
-		lda #$d1
-		sta $2006
 		lda #$02
-		sta $2007
-		sta $2007
+		sta PVolume + 0
 		jmp ch04
 	;発音中の場合
 	@keyon:
+		lda #YPOS3 + 16			;ハイライト鍵盤を表示
+		sta CH3KEY + 0
 		lda PAFreq_H + 2
 		cmp Freq_H, x
 		bne @f2n
 		lda PAFreq_L + 2
 		cmp Freq_L, x
 		bne @f2n
-		lda PAOctave + 2
-		sta DspWork + 2
-		lda PANote + 2
-		sta DspWork + 3
-		jmp @pos
+		jmp @volume
 	@f2n:
 		jsr freq2note
-		lda DspWork + 2
-		sta PAOctave + 2
-		lda DspWork + 3
-		sta PANote + 2
 		lda Freq_L, x
 		sta PAFreq_L + 2
 		lda Freq_H, x
@@ -438,36 +380,21 @@ YPOS5 = $A7
 		ldy DspWork + 3
 		adc posmap, y
 		sta CH3KEY + 3			;ハイライト鍵盤の位置
-		lda #YPOS3 + 16
-		sta CH3KEY + 0
-	;音量バー
-	;@volume:
-		lda #$21
-		sta $2006
-		lda #$d1
-		sta $2006
-		lda #$29
-		sta $2007
-		sta $2007
 	;ノートナンバー表示
 	;@notenum:
-		lda #$21
-		sta $2006
-		lda #$e7
-		sta $2006
 		lda DspWork + 2
 		clc
 		adc #$2f				;三角波は1オクターブ低く表示
-		sta $2007				;オクターブ番号
+		sta POctave + 2			;オクターブ番号
 		lda charmap, y
-		sta $2007				;音名
+		sta PNote + 2			;音名
 	@note:
 		lda DspWork + 3
 		tay
 		lda halftone, y
 		bne @half
 		lda #$02
-		sta $2007				;シャープ記号
+		sta PSharp				;シャープ記号
 		lda DspWork + 3
 		cmp #4
 		beq @sqr
@@ -479,12 +406,16 @@ YPOS5 = $A7
 		lda #$5c
 	@write:
 		sta CH3KEY + 1			;ハイライト鍵盤の形
-		jmp ch04
+		jmp @volume
 	@half:
 		lda #$3b
-		sta $2007				;シャープ記号
+		sta PSharp + 2				;シャープ記号
 		lda #$5e
 		sta CH3KEY + 1			;ハイライト鍵盤の形
+	;音量バー
+	@volume:
+		lda #$29
+		sta PVolume + 0
 
 	;----------------ch4----------------
 	ch04:
@@ -495,21 +426,31 @@ YPOS5 = $A7
 		beq @exec
 		jmp ch05
 	@exec:
+		stx CurTrack
 		lda Frags, x
 		and #FRAG_SIL
 		beq @keyon
+		lda #$ff
+		sta CH4KEY + 0
+		lda #$60
+		sta CH4VOL1 + 3
+		lda #$68
+		sta CH4VOL2 + 3
 		lda #YPOS4
 		sta CH4VOL1 + 0
 		sta CH4VOL2 + 0
-		lda #$ff
-		sta CH4KEY + 0
 		jmp ch05
 	;発音中の場合
 	@keyon:
 		lda #YPOS4 + 8
 		sta CH4KEY + 0			;ハイライト鍵盤を表示
+		lda PANote + 0
+		cmp NoteN, x
+		beq @volume
 	;鍵盤の位置計算
 	@pos:
+		lda NoteN, x
+		sta PANote + 0
 		lda #$0f
 		sec
 		sbc NoteN, x
@@ -524,8 +465,10 @@ YPOS5 = $A7
 		adc #$58
 		sta CH4KEY + 3			;ハイライト鍵盤の位置
 	;音量バー
-	;@volume:
+	@volume:
 		lda Volume, x
+		cmp PAVolume + 3
+		beq @tone
 		cmp #15
 		bcc @next1
 		lda #$ff
@@ -554,18 +497,14 @@ YPOS5 = $A7
 		sta CH4VOL2 + 0
 	;音色
 	@tone:
-		lda #$22
-		sta $2006
-		lda #$4f
-		sta $2006
 		lda Tone, x
 		bne @p
 		lda #$43
-		sta $2007
+		sta PTone + 2
 		jmp ch05
 	@p:
 		lda #$45
-		sta $2007
+		sta PTone + 2
 	
 	;----------------ch5----------------
 	ch05:
@@ -579,27 +518,18 @@ YPOS5 = $A7
 		lda $4015
 		and #%00010000					;DPCM再生bitを直接読む
 		bne @keyon
-		lda #$22
-		sta $2006
-		lda #$ac
-		sta $2006
 		lda #$02
-		sta $2007
-		sta $2007
+		sta PVolume + 1
 		lda #$ff
 		sta CH5KEY + 0
 		jmp end
 	;発音中の場合
 	@keyon:
-		lda #$22
-		sta $2006
-		lda #$ac
-		sta $2006
-		lda #$29
-		sta $2007
-		sta $2007
 		lda #YPOS5 + 8
 		sta CH5KEY + 0				;ハイライト鍵盤を表示
+		lda PANote + 1
+		cmp NoteN, x
+		beq @volume
 	;鍵盤の位置計算
 	@pos:
 		lda #$0f
@@ -615,6 +545,9 @@ YPOS5 = $A7
 		bne @L
 		adc #$58
 		sta CH5KEY + 3				;ハイライト鍵盤の位置
+	@volume:
+		lda #$29
+		sta PVolume + 1
 	end:
 		rts
 .endproc
@@ -623,7 +556,7 @@ YPOS5 = $A7
 ;アクティブな音源があるかどうかを調べて
 ;aに結果、xにトラック番号を入れて返す
 .proc gettrack
-		ldx #0
+		ldx CurTrack
 	@L:
 		lda Device, x
 		cmp DspWork
@@ -649,7 +582,112 @@ YPOS5 = $A7
 .endproc
 
 
+.proc dsp_write
+		;時間表示
+		lda #$20
+		sta $2006
+		lda #$73
+		sta $2006
+		lda __mm
+		sta $2007
+		lda __m
+		sta $2007
+		lda #$3a
+		sta $2007
+		lda __ss
+		sta $2007
+		lda __s
+		sta $2007
+		lda #$3a
+		sta $2007
+		lda __cc
+		sta $2007
+		lda __c
+		sta $2007
+		;----------------ch1----------------
+		lda #$20
+		sta $2006
+		lda #$e7
+		sta $2006
+		lda POctave + 0
+		sta $2007
+		lda PNote + 0
+		sta $2007
+		lda PSharp + 0
+		sta $2007
+		lda #$20
+		sta $2006
+		lda #$d5
+		sta $2006
+		lda PTone + 0
+		sta $2007
+		;----------------ch2----------------
+		lda #$21
+		sta $2006
+		lda #$67
+		sta $2006
+		lda POctave + 1
+		sta $2007
+		lda PNote + 1
+		sta $2007
+		lda PSharp + 1
+		sta $2007
+		lda #$21
+		sta $2006
+		lda #$55
+		sta $2006
+		lda PTone + 1
+		sta $2007
+		;----------------ch3----------------
+		lda #$21
+		sta $2006
+		lda #$d1
+		sta $2006
+		lda PVolume + 0
+		sta $2007
+		sta $2007
+		lda #$21
+		sta $2006
+		lda #$e7
+		sta $2006
+		lda POctave + 2
+		sta $2007
+		lda PNote + 2
+		sta $2007
+		lda PSharp + 2
+		sta $2007
+		;----------------ch4----------------
+		lda #$22
+		sta $2006
+		lda #$4f
+		sta $2006
+		lda PTone + 2
+		sta $2007
+		;----------------ch5----------------
+		lda #$22
+		sta $2006
+		lda #$ac
+		sta $2006
+		lda PVolume + 1
+		sta $2007
+		sta $2007
+		rts
+.endproc
+
 .proc dsp_init
+		lda #$30
+		sta __c
+		sta __cc
+		sta __s
+		sta __ss
+		sta __m
+		sta __mm
+		lda #$02
+		ldx #14
+	@L:
+		sta POctave, x
+		dex
+		bpl @L
 		;描画停止
 		lda #$80
 		sta $2000
@@ -1077,13 +1115,13 @@ YPOS5 = $A7
 
 ;a % DspWork
 .proc rem
-		ldy #0
+		ldx #0
 	@L:
 		cmp DspWork
 		bcc end
 		sec
 		sbc DspWork
-		iny
+		inx
 		jmp @L
 	end:
 		rts
