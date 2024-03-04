@@ -394,7 +394,7 @@ YPOS5 = $A7
 		lda halftone, y
 		bne @half
 		lda #$02
-		sta PSharp				;シャープ記号
+		sta PSharp + 2			;シャープ記号
 		lda DspWork + 3
 		cmp #4
 		beq @sqr
@@ -1062,6 +1062,17 @@ YPOS5 = $A7
 		;ch5
 		lda #$5f
 		sta CH5KEY + 1
+		
+		;BG書き換えの変数初期化
+		lda #$30
+		sta POctave + 0
+		sta POctave + 1
+		sta POctave + 2
+
+		lda #$3e
+		sta PNote + 0
+		sta PNote + 1
+		sta PNote + 2
 		
 		;スプライト転送
 		lda #$07
