@@ -1052,15 +1052,6 @@ DpcmLength:		.res	1	;DPCMのデータ長
 		cmp #4
 		beq noise
 		jmp calcoct
-	noise:
-		lda NoteN, x
-		and #$0f
-		sta Work + 2
-		lda #$0f
-		sec
-		sbc Work + 2
-		sta NoteN, x
-		sta RefNoteN, x
 	end1:
 		rts
 	calcoct:
@@ -1531,11 +1522,6 @@ DpcmLength:		.res	1	;DPCMのデータ長
 		lda NEnvPos, x
 		asl a
 		tay
-		lda Device, x
-		cmp #3				;ノイズとDPCM以外は下へ
-		beq @N
-		cmp #4
-		beq @N
 		lda (Work + 2), y		;アドレスにあるデータを取得
 		clc
 		adc RefNoteN, x		;ノートナンバーに加算
@@ -1551,13 +1537,6 @@ DpcmLength:		.res	1	;DPCMのデータ長
 		asl a
 		tay
 		jmp last
-	@N:
-		lda (Work + 2), y		;アドレスにあるデータを取得
-		eor	#$ff				;反転して加算
-		clc
-		adc #1
-		adc RefNoteN, x
-		sta NoteN, x
 	last:
 		iny
 		lda (Work + 2), y		;アドレスにあるデータを取得（フレーム数）
@@ -1731,8 +1710,18 @@ DpcmLength:		.res	1	;DPCMのデータ長
 		ora Volume, x
 		sta $4008
 		jmp writereg_end
+	rem:
+		cmp #DEV_VRC6_SQR1
+		bcs vrc6_0
+		lda NoteN, x
+		and #$0f
+		sta Work
+		lda #$0f
+		sec
+		sbc Work
+		sta NoteN, x
 	noi:
-		cmp #3
+		lda Device, x
 		bne pcm
 		lda Volume, x
 		ora #%00110000
