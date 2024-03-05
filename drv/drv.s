@@ -311,13 +311,6 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 .endproc
 
 
-.proc set_dpcm
-		sta DpcmAddr_L
-		stx DpcmAddr_H
-		rts
-.endproc
-
-
 .proc pretrack
 	start:
 		lda Frags, x

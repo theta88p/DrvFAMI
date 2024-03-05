@@ -6,7 +6,6 @@
 	.import		drv_init
 	.import		drv_sndreq
 	.import		drv_main
-	.import		set_dpcm
 	.import		_DPCMinfo
 	.import		_BGM0
 	
@@ -18,9 +17,6 @@
 ; ------------------------------------------------------------------------
 
 .rodata
-
-;Address of D-PCM information
-dpcm_info:	.addr	_DPCMinfo
 
 ;Address of BGM Sequence
 bgm_00:		.addr	_BGM0
@@ -44,9 +40,6 @@ bgm_00:		.addr	_BGM0
 	pha
 	jsr drv_init
 	
-	lda	dpcm_info
-	ldx	dpcm_info + 1
-	jsr	set_dpcm
 	pla
 	tay
 	lda	bgm_00
