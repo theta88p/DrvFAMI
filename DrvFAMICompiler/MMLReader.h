@@ -52,6 +52,20 @@
 #define MEM_WRITE			0xf9
 #define SUBROUTINE			0xfa
 
+#define DEV_2A03_SQR1		0
+#define DEV_2A03_SQR2		1
+#define DEV_2A03_TRI		2
+#define DEV_2A03_NOISE		3
+#define DEV_2A03_DPCM		4
+#define DEV_VRC6_SQR1		5
+#define DEV_VRC6_SQR2		6
+#define DEV_MMC5_SQR1		7
+#define DEV_MMC5_SQR2		8
+#define DEV_VRC6_SAW		9
+#define DEV_SS5B_SQR1		10
+#define DEV_SS5B_SQR2		11
+#define DEV_SS5B_SQR3		12
+
 enum ExtDev
 {
 	VRC6 = 1,

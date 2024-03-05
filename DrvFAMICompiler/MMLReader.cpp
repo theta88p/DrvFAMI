@@ -1203,7 +1203,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     {
                         data.push_back(TONE);
 
-                        if (tr.device == 4)     //DPCMトラックなら
+                        if (tr.device == DEV_2A03_DPCM)     //DPCMトラックなら
                         {
                             if (dpcmlist.count(args[0]))
                             {
@@ -1249,7 +1249,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 }
                 else
                 {
-                    if (tr.device == 3 || tr.device == 4)
+                    if (tr.device == DEV_2A03_NOISE || tr.device == DEV_2A03_DPCM)
                     {
                         //newNN = 0x0f - newNN & 0x0f;  //ドライバ側でやる
                     }
@@ -1264,7 +1264,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             }
             else
             {
-                if (tr.device == 3 || tr.device == 4)
+                if (tr.device == DEV_2A03_NOISE || tr.device == DEV_2A03_DPCM)
                 {
                     //nn = 0x0f - nn & 0x0f;    //ドライバ側でやる
                 }
@@ -1491,12 +1491,11 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             skipSpace();
             if (getMultiDigit(n))   //数値なら音色指定
             {
-                data.push_back(TONE);
-
-                if (tr.device == 4)     //DPCMトラックなら
+                if (tr.device == DEV_2A03_DPCM)     //DPCMトラックなら
                 {
                     if (dpcmlist.count(n))
                     {
+                        data.push_back(TONE);
                         data.push_back(dpcmlist[n].offset / 0x40);
                         data.push_back(dpcmlist[n].size / 0x10);
                     }
@@ -1506,8 +1505,50 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         exit(1);
                     }
                 }
+                else if (tr.device >= DEV_SS5B_SQR1 && tr.device <= DEV_SS5B_SQR3)
+                {
+                    std::vector<int> t;
+                    int r = 0;
+
+                    skipSpace();
+                    while (getc(c))
+                    {
+                        if (c == ',')
+                        {
+                            skipSpace();
+                            if (getMultiDigit(n))
+                            {
+                                t.push_back(n);
+                            }
+                        }
+                        else
+                        {
+                            break;
+                        }
+                        skipSpace();
+                    }
+
+                    if (t.size() >= 3)
+                    {
+                        for (int i = 0; i < 3; i++)
+                        {
+                            switch (t[i])
+                            {
+                            case 0:
+                                r |= 0x08 << i; break;
+                            case 1:
+                                r |= 0x01 << i; break;
+                            case 2:
+                                break;
+                            }
+                        }
+                        data.push_back(TONE);
+                        data.push_back(r);
+                    }
+                }
                 else
                 {
+                    data.push_back(TONE);
                     data.push_back(n);
                 }
             }

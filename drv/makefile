@@ -64,6 +64,8 @@ CP      = copy
 	$(AS) drv.s $(ASFLAGS) -D MMC5=1 -o drv_mmc5.o 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 	@echo [Assemble] : drv.s >>$(ERRLOG_FILE)
 	$(AS) drv.s $(ASFLAGS) -D VRC6=1 -o drv_vrc6.o 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	@echo [Assemble] : drv.s >>$(ERRLOG_FILE)
+	$(AS) drv.s $(ASFLAGS) -D SS5B=1 -o drv_ss5b.o 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
 
 %.s : %.mml $(DMC_FILES)		#;".dmc"ファイルが更新された場合は、.mmlは、全部コンパイルする。
@@ -160,7 +162,7 @@ dsp.nes : $(MAIN_DSP_FILES) $(CHR_FILES)
 
 else
 
-all : drv.bin drv_mmc5.bin drv_vrc6.bin dsp.bin
+all : drv.bin drv_mmc5.bin drv_vrc6.bin drv_ss5b.bin dsp.bin
 
 drv.bin : drv.o $(MAIN_NSF_FILES)
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
@@ -171,6 +173,10 @@ drv_mmc5.bin : drv_mmc5.o $(MAIN_NSF_FILES)
 	$(LINKER) $(LD_NSF_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
 drv_vrc6.bin : drv_vrc6.o $(MAIN_NSF_FILES)
+	@echo [Link] : $@ >>$(ERRLOG_FILE)
+	$(LINKER) $(LD_NSF_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+
+drv_ss5b.bin : drv_ss5b.o $(MAIN_NSF_FILES)
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
 	$(LINKER) $(LD_NSF_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 

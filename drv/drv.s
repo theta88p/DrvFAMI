@@ -94,7 +94,6 @@ ProcTr:			.res	1	;処理中のトラック
 SeqAddr_L:		.res	1	;シーケンス情報のアドレスL
 SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 
-
 ;00～6b	:o0c～o8b	音長デフォ
 ;6c	:r		休符（音長デフォ）
 ;6d	:[x		ループ開始
@@ -183,6 +182,12 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		sta $5004
 		lda #%00000011
 		sta $5015
+.endif
+.ifdef SS5B
+		lda #$7
+		sta $c000
+		lda #%00111000
+		sta $e000
 .endif
 		lda #0
 		sta SkipCtr
@@ -549,8 +554,15 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		and #FRAG_TENV_CLR	;音色エンベロープを解除
 		sta EnvFrags, x
 		lda Device, x
-		cmp #4			;DPCMトラックなら
+		cmp #DEV_2A03_DPCM	;DPCMトラックなら
 		beq @D
+.ifdef SS5B
+		cmp #DEV_SS5B_SQR3 + 1
+		bcs @N
+		cmp #DEV_SS5B_SQR1
+		bcs @ss5b
+	@N:
+.endif
 		ldy #1
 		lda (Work), y
 		sta Tone, x
@@ -568,6 +580,14 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		lda #3
 		jsr addptr
 		rts
+.ifdef SS5B
+	@ss5b:
+		lda #$7
+		sta $c000
+		ldy #1
+		lda (Work), y
+		sta $e000
+.endif
 	l77:
 		cmp #$77	;フレームスキップ加算値（テンポ）
 		bne l78
@@ -1035,10 +1055,10 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		sta NoteN, x
 		sta RefNoteN, x		;ノートナンバーを記憶
 		lda Device, x
-		cmp #3				;ノイズとDPCM以外は周波数計算へ
-		beq noise
-		cmp #4
-		beq noise
+		cmp #DEV_2A03_NOISE	;ノイズとDPCM以外は周波数計算へ
+		beq end1
+		cmp #DEV_2A03_DPCM
+		beq end1
 		jmp calcoct
 	end1:
 		rts
@@ -1095,8 +1115,10 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		asl a
 		tay
 		lda Device, x
-		cmp #7
+		cmp #DEV_VRC6_SAW
 		beq saw
+		cmp #DEV_SS5B_SQR1
+		bcs ss5b
 		lda Freq_Tbl, y
 		sta Work
 		lda Freq_Tbl + 1, y
@@ -1108,6 +1130,16 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		sta Work
 		lda Freq_Saw + 1, y
 		sta Work + 1
+		jmp calc
+.endif
+	ss5b:
+.ifdef SS5B
+		inc Octave, x	;5Bは-1オクターブから
+		lda Freq_5B, y
+		sta Work
+		lda Freq_5B + 1, y
+		sta Work + 1
+		jmp calc
 .endif
 	calc:
 		ldy Octave, x	;オクターブから周波数を計算する
@@ -1678,18 +1710,18 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 	exec:
 		lda Device, x
 	sqr0:
-		cmp #0
+		cmp #DEV_2A03_SQR1
 		bne sqr1
 		ldy #0
 		jmp writesqr
 	sqr1:
-		cmp #1
+		cmp #DEV_2A03_SQR2
 		bne tri
 		ldy #4
 		jmp writesqr
 	tri:
-		cmp #2
-		bne noi
+		cmp #DEV_2A03_TRI
+		bne rem
 		lda Freq_L, x
 		sta $400a
 		lda Freq_H, x
@@ -1710,6 +1742,7 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		sta NoteN, x
 	noi:
 		lda Device, x
+		cmp #DEV_2A03_NOISE
 		bne pcm
 		lda Volume, x
 		ora #%00110000
@@ -1724,8 +1757,6 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		sta $400f
 		jmp writereg_end
 	pcm:
-		cmp #4
-		bne vrc6_0
 		lda Frags, x
 		and #FRAG_KEYON | FRAG_KEYOFF	;キーオンもキーオフもたっていなければ終了
 		beq end
@@ -1749,32 +1780,49 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		jmp writereg_end
 	vrc6_0:
 .ifdef VRC6
-		cmp #5
+		cmp #DEV_VRC6_SQR1
 		bne vrc6_1
 		ldy #$90
 		jmp write_vrc6
 	vrc6_1:
-		cmp #6
+		cmp #DEV_VRC6_SQR2
 		bne vrc6_2
 		ldy #$a0
 		jmp write_vrc6
 	vrc6_2:
-		cmp #7
+		cmp #DEV_VRC6_SAW
 		bne mmc5_0
 		ldy #$b0
 		jmp write_vrc6
 .endif
 	mmc5_0:
 .ifdef MMC5
-		cmp #8
+		cmp #DEV_MMC5_SQR1
 		bne mmc5_1
 		ldy #0
 		jmp write_mmc5
 	mmc5_1:
-		cmp #9
-		bne end
+		cmp #DEV_MMC5_SQR2
+		bne ss5b_0
 		ldy #4
 		jmp write_mmc5
+.endif
+	ss5b_0:
+.ifdef SS5B
+		cmp #DEV_SS5B_SQR1
+		bne ss5b_1
+		ldy #0
+		jmp write_ss5b
+	ss5b_1:
+		cmp #DEV_SS5B_SQR2
+		bne ss5b_2
+		ldy #1
+		jmp write_ss5b
+	ss5b_2:
+		cmp #DEV_SS5B_SQR3
+		bne end
+		ldy #2
+		jmp write_ss5b
 .endif
 	end:
 		jmp writereg_end
@@ -1831,7 +1879,7 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		sta $4000, y
 		lda Volume, x		;音量が0ならこれ以降は処理しない
 		bne hws
-		jmp writereg_end
+		jmp end
 	hws:
 		ldy Work + 2
 		lda HSwpReg, x
@@ -1893,7 +1941,7 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 	next:
 		lda Volume, x		;音量が0ならこれ以降は処理しない
 		bne r9001
-		jmp writereg_end
+		jmp end
 	r9001:
 		lda #1
 		sta Work + 2
@@ -1931,7 +1979,7 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		sta $5000, y
 		lda Volume, x		;音量が0ならこれ以降は処理しない
 		bne next
-		jmp writereg_end
+		jmp end
 	next:
 		lda Frags, x
 		and #FRAG_KEYON		;キーオンなら
@@ -1955,6 +2003,39 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		lda #%00001000
 		ora Freq_H, x
 		sta $5003, y		;ここに書き込むと波形がリセットされるので注意
+	end:
+		jmp writereg_end
+.endproc
+.endif
+
+;SS5B
+.ifdef SS5B
+.proc write_ss5b
+		tya
+		clc
+		adc #$08
+		sta $c000
+		lda Volume, x
+		sta $e000
+		tya
+		asl a
+		tay
+		sty $c000
+		lda Freq_L, x
+		sta $e000
+		iny
+		sty $c000
+		lda Freq_H, x
+		sta $e000
+		lda #$06
+		sta $c000
+		lda NoteN, x
+		and #$1f
+		sta Work
+		lda #$1f
+		sec
+		sbc Work
+		sta $e000
 	end:
 		jmp writereg_end
 .endproc
@@ -2047,4 +2128,20 @@ Freq_Saw:
 	.word	$1214
 	.word	$1110
 	.word	$1010
+.endif
+
+.ifdef SS5B
+Freq_5B:
+	.word	$1ab9
+	.word	$1935
+	.word	$17ce
+	.word	$1675
+	.word	$1531
+	.word	$1402
+	.word	$12e1
+	.word	$11d4
+	.word	$10d3
+	.word	$0fdf
+	.word	$0efc
+	.word	$0e24
 .endif

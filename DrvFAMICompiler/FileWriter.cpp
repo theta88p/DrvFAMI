@@ -253,7 +253,7 @@ void FileWriter::createNsf()
     nsfhead[0x09] = 0x80;
     nsfhead[0x0a] = 0x2f;   //初期化アドレス
     nsfhead[0x0b] = 0x80;
-    nsfhead[0x0c] = 0x47;   //再生アドレス
+    nsfhead[0x0c] = 0x3e;   //再生アドレス
     nsfhead[0x0d] = 0x80;
     nsfhead[0x7b] = extdevice;   //拡張音源
 
@@ -276,6 +276,7 @@ void FileWriter::createNsf()
     }
     else if (extdevice & ExtDev::SS5B)
     {
+        drv += L"bin\\drv_ss5b.bin";
     }
     else
     {
