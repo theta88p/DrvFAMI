@@ -10,7 +10,6 @@
 .export		drv_main
 .export		drv_init
 .export		drv_sndreq
-.export		set_dpcm
 
 .include	"drv.inc"
 
@@ -94,10 +93,6 @@ SkipFreq:		.res	1	;スキップカウンタに加算する値
 ProcTr:			.res	1	;処理中のトラック
 SeqAddr_L:		.res	1	;シーケンス情報のアドレスL
 SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
-DpcmAddr_L:		.res	1	;DPCMのデータがあるアドレスL
-DpcmAddr_H:		.res	1	;DPCMのデータがあるアドレスH
-DpcmOffset:		.res	1	;DPCMのデータまでのオフセット
-DpcmLength:		.res	1	;DPCMのデータ長
 
 
 ;00～6b	:o0c～o8b	音長デフォ
@@ -573,10 +568,10 @@ DpcmLength:		.res	1	;DPCMのデータ長
 	@D:
 		ldy #1
 		lda (Work), y
-		sta DpcmOffset
+		sta $4012
 		ldy #2
 		lda (Work), y
-		sta DpcmLength
+		sta $4013
 		lda #3
 		jsr addptr
 		rts
@@ -1750,10 +1745,6 @@ DpcmLength:		.res	1	;DPCMのデータ長
 		beq @N
 		sta $4011
 	@N:
-		lda DpcmOffset
-		sta $4012
-		lda DpcmLength
-		sta $4013
 		lda #%00001111
 		sta $4015
 		lda #%00011111
