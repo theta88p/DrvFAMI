@@ -1508,6 +1508,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 else if (tr.device >= DEV_SS5B_SQR1 && tr.device <= DEV_SS5B_SQR3)
                 {
                     std::vector<int> t;
+                    t.push_back(n);
                     int r = 0;
 
                     skipSpace();
@@ -1523,6 +1524,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         }
                         else
                         {
+                            ss.seekg((int)ss.tellg() - 1);
                             break;
                         }
                         skipSpace();
@@ -1544,6 +1546,14 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         }
                         data.push_back(TONE);
                         data.push_back(r);
+                        data.push_back(t[0]);
+                        data.push_back(t[1]);
+                        data.push_back(t[2]);
+                    }
+                    else
+                    {
+                        std::cerr << "Line " << linenum << " : Missing tone arguments." << std::endl;
+                        exit(1);
                     }
                 }
                 else
@@ -1989,29 +1999,62 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
             }
             else if (c == 'e' || c == 'E')  //ハードウェアエンベロープ
             {
-                int rate, loop;
                 bool res = false;
-                skipSpace();
-                if (isNextChar('*'))
+
+                if (tr.device >= DEV_SS5B_SQR1 && tr.device <= DEV_SS5B_SQR3)
                 {
-                    data.push_back(HW_ENV);
-                    data.push_back(0x10);
-                    res = true;
-                }
-                else if (getMultiDigit(n))
-                {
-                    loop = n;
+                    int rate, shape;
                     skipSpace();
-                    if (isNextChar(','))
+                    if (isNextChar('*'))
                     {
+                        data.push_back(HW_ENV);
+                        data.push_back(0x00);
+                        res = true;
+                    }
+                    else if (getMultiDigit(n))
+                    {
+                        rate = n;
                         skipSpace();
-                        if (getMultiDigit(n))
+                        if (isNextChar(','))
                         {
-                            rate = n;
-                            unsigned char v = (unsigned char)(loop & 0x01 << 5) + (unsigned char)(rate & 0x0f);
-                            data.push_back(HW_ENV);
-                            data.push_back(v);
-                            res = true;
+                            skipSpace();
+                            if (getMultiDigit(n))
+                            {
+                                shape = n;
+                                data.push_back(HW_ENV);
+                                data.push_back(0xff & rate);
+                                data.push_back((rate >> 8) & 0xff);
+                                data.push_back(0xf & shape);
+                                res = true;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    int rate, loop;
+                    skipSpace();
+                    if (isNextChar('*'))
+                    {
+                        data.push_back(HW_ENV);
+                        data.push_back(0x10);
+                        res = true;
+                    }
+                    else if (getMultiDigit(n))
+                    {
+                        loop = n;
+                        skipSpace();
+                        if (isNextChar(','))
+                        {
+                            skipSpace();
+                            if (getMultiDigit(n))
+                            {
+                                rate = n;
+                                unsigned char v = (unsigned char)(loop & 0x01 << 5) + (unsigned char)(rate & 0x0f);
+                                data.push_back(HW_ENV);
+                                data.push_back(v);
+                                res = true;
+                            }
                         }
                     }
                 }

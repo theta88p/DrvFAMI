@@ -93,6 +93,10 @@ SkipFreq:		.res	1	;スキップカウンタに加算する値
 ProcTr:			.res	1	;処理中のトラック
 SeqAddr_L:		.res	1	;シーケンス情報のアドレスL
 SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
+.ifdef SS5B
+SS5BTone:		.res	3
+SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効なら0
+.endif
 
 ;00～6b	:o0c～o8b	音長デフォ
 ;6c	:r		休符（音長デフォ）
@@ -184,6 +188,13 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		sta $5015
 .endif
 .ifdef SS5B
+		lda #0
+		sta SS5BTone + 0
+		sta SS5BTone + 1
+		sta SS5BTone + 2
+		sta SS5BHWEnv + 0
+		sta SS5BHWEnv + 1
+		sta SS5BHWEnv + 2
 		lda #$7
 		sta $c000
 		lda #%00111000
@@ -560,7 +571,24 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		cmp #DEV_SS5B_SQR3 + 1
 		bcs @N
 		cmp #DEV_SS5B_SQR1
-		bcs @ss5b
+		bcc @N
+		lda #$7
+		sta $c000
+		ldy #1
+		lda (Work), y
+		sta $e000
+		ldy #2
+		lda (Work), y
+		sta SS5BTone + 0
+		ldy #3
+		lda (Work), y
+		sta SS5BTone + 1
+		ldy #4
+		lda (Work), y
+		sta SS5BTone + 2
+		lda #5
+		jsr addptr
+		rts
 	@N:
 .endif
 		ldy #1
@@ -580,14 +608,6 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		lda #3
 		jsr addptr
 		rts
-.ifdef SS5B
-	@ss5b:
-		lda #$7
-		sta $c000
-		ldy #1
-		lda (Work), y
-		sta $e000
-.endif
 	l77:
 		cmp #$77	;フレームスキップ加算値（テンポ）
 		bne l78
@@ -889,6 +909,42 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 	lf5:
 		cmp #$f5			;ハードウェアエンベロープ
 		bne lf6
+.ifdef SS5B
+		lda Device, x
+		cmp #DEV_SS5B_SQR3 + 1
+		bcs @N
+		cmp #DEV_SS5B_SQR1
+		bcc @N
+		sec
+		sbc #DEV_SS5B_SQR1
+		tax
+		ldy #1
+		lda (Work), y
+		sta SS5BHWEnv, x
+		bne @E
+		ldx ProcTr
+		rts
+	@E:
+		ldx ProcTr
+		lda #$0b
+		sta $c000
+		ldy #2
+		lda (Work), y
+		sta $e000
+		lda #$0c
+		sta $c000
+		ldy #3
+		lda (Work), y
+		sta $e000
+		lda #$0d
+		sta $c000
+		ldy #4
+		lda (Work), y
+		sta $e000
+		lda #5
+		jsr addptr
+	@N:
+.endif
 		ldy #1
 		lda (Work), y
 		sta HEnvReg, x
@@ -1708,6 +1764,7 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 	end1:
 		rts
 	exec:
+		stx ProcTr
 		lda Device, x
 	sqr0:
 		cmp #DEV_2A03_SQR1
@@ -2015,7 +2072,11 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		clc
 		adc #$08
 		sta $c000
-		lda Volume, x
+		lda SS5BHWEnv, y
+		beq @N
+		lda #%00010000
+	@N:
+		ora Volume, x
 		sta $e000
 		tya
 		asl a
@@ -2027,6 +2088,8 @@ SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 		sty $c000
 		lda Freq_H, x
 		sta $e000
+		lda SS5BTone, y
+		beq end
 		lda #$06
 		sta $c000
 		lda NoteN, x
