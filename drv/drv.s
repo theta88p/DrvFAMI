@@ -1112,10 +1112,40 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta RefNoteN, x		;ノートナンバーを記憶
 		lda Device, x
 		cmp #DEV_2A03_NOISE	;ノイズとDPCM以外は周波数計算へ
-		beq end1
+		beq rem
 		cmp #DEV_2A03_DPCM
-		beq end1
+		beq rem
+.ifdef SS5B
+		cmp #DEV_SS5B_SQR3 + 1
+		bcs @N2
+		cmp #DEV_SS5B_SQR1
+		bcc @N2
+		sec
+		sbc #DEV_SS5B_SQR1
+		tay
+		lda SS5BTone, y
+		beq @N2
+		lda NoteN, x
+		and #$1f
+		sta Work
+		lda #$1f
+		sec
+		sbc Work
+		sta NoteN, x
+		sta RefNoteN, x
+		jmp end1
+	@N2:
+.endif
 		jmp calcoct
+	rem:
+		lda NoteN, x
+		and #$0f
+		sta Work
+		lda #$0f
+		sec
+		sbc Work
+		sta NoteN, x
+		sta RefNoteN, x
 	end1:
 		rts
 	calcoct:
@@ -1597,8 +1627,28 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 	get:
 		lda NEnvPos, x
 		asl a
+		pha
+		lda Device, x
+		cmp #DEV_2A03_NOISE
+		beq @N
+		cmp #DEV_2A03_DPCM
+		beq @N
+.ifdef SS5B
+		cmp #DEV_SS5B_SQR3 + 1
+		bcs @N2
+		cmp #DEV_SS5B_SQR1
+		bcc @N2
+		sec
+		sbc #DEV_SS5B_SQR1
 		tay
-		lda (Work + 2), y		;アドレスにあるデータを取得
+		lda SS5BTone, y
+		beq @N2
+		jmp @N
+	@N2:
+.endif
+		pla
+		tay
+		lda (Work + 2), y	;アドレスにあるデータを取得
 		clc
 		adc RefNoteN, x		;ノートナンバーに加算
 		sta NoteN, x
@@ -1613,6 +1663,15 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		asl a
 		tay
 		jmp last
+	@N:
+		pla
+		tay
+		lda (Work + 2), y	;アドレスにあるデータを取得
+		eor #$ff			;反転して加算
+		clc
+		adc #1
+		adc RefNoteN, x
+		sta NoteN, x
 	last:
 		iny
 		lda (Work + 2), y		;アドレスにあるデータを取得（フレーム数）
@@ -1778,7 +1837,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		jmp writesqr
 	tri:
 		cmp #DEV_2A03_TRI
-		bne rem
+		bne noi
 		lda Freq_L, x
 		sta $400a
 		lda Freq_H, x
@@ -1787,18 +1846,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		ora Volume, x
 		sta $4008
 		jmp writereg_end
-	rem:
-		cmp #DEV_VRC6_SQR1
-		bcs vrc6_0
-		lda NoteN, x
-		and #$0f
-		sta Work
-		lda #$0f
-		sec
-		sbc Work
-		sta NoteN, x
 	noi:
-		lda Device, x
 		cmp #DEV_2A03_NOISE
 		bne pcm
 		lda Volume, x
@@ -1814,6 +1862,8 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta $400f
 		jmp writereg_end
 	pcm:
+		cmp #DEV_2A03_DPCM
+		bne vrc6_0
 		lda Frags, x
 		and #FRAG_KEYON | FRAG_KEYOFF	;キーオンもキーオフもたっていなければ終了
 		beq end
@@ -2093,11 +2143,6 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda #$06
 		sta $c000
 		lda NoteN, x
-		and #$1f
-		sta Work
-		lda #$1f
-		sec
-		sbc Work
 		sta $e000
 	end:
 		jmp writereg_end
