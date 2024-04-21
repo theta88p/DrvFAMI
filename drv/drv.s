@@ -1681,6 +1681,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		eor #$ff			;反転して加算
 		clc
 		adc #1
+		clc
 		adc RefNoteN, x
 		sta NoteN, x
 	last:
