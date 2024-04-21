@@ -216,10 +216,8 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 .proc track_init
 		lda #0
 		sta Volume, x
-		sta LenCtr, x
 		sta InfLoopAddr_L, x
 		sta InfLoopAddr_H, x
-		sta GateCtr, x
 		sta Gate, x
 		sta KeyShift, x
 		sta Detune, x
@@ -228,6 +226,9 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta EnvFrags, x
 		sta Tone, x
 		sta RefTone, x
+		lda #1
+		sta LenCtr, x
+		sta GateCtr, x
 		lda #FRAG_LOAD | FRAG_SIL
 		sta Frags, x
 		lda #FRAG_ENV_DIS
@@ -361,14 +362,13 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 	len:
 		stx ProcTr
 		lda LenCtr, x
-		beq seq				;音長カウンタが0になったらシーケンスのロード
-	gate:					;音長カウンタが0でなければゲート処理へ
+		cmp #1
+		beq seq				;音長カウンタが1になったらシーケンスのロード
+	gate:					;音長カウンタが1でなければゲート処理へ
 		lda GateCtr, x
-		bne cnt				;ゲートカウンタが0でなければカウント処理へ
-		lda Frags, x
-		and #FRAG_KEYOFF
-		bne cnt				;ゲートカウンタが0でキーオフされていなかったらキーオフ
-		lda Frags, x		;キーオフされていたら終了
+		cmp #1
+		bne cnt				;ゲートカウンタが1でなければカウント処理へ
+		lda Frags, x		;ゲートカウンタが1になったらキーオフ
 		ora #FRAG_KEYOFF
 		and #FRAG_KEYON_CLR	& FRAG_KEYON_DIS_CLR
 		sta Frags, x
@@ -386,6 +386,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		rts
 	note:
 		jsr procnote
+		jmp end
 	cnt:
 		lda LenCtr, x
 		beq end
@@ -1062,6 +1063,9 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 .proc procnote
 		lda Length, x
 		sta LenCtr, x
+		lda Frags, x
+		and #FRAG_KEYON		;キーオンでない場合
+		beq next
 		lda Gate, x
 		and #%00111111
 		sta Work
@@ -1416,7 +1420,6 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 	keyon:
 		lda #1
 		sta VEnvPos, x		;キーオン位置に移動
-		lda #1
 		clc
 		adc VEnvDelay, x	;ディレイを加算
 		sta VEnvCtr, x
@@ -1428,14 +1431,16 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne other
 		ldy #1
 		lda (Work + 2), y
+		cmp VEnvPos, x
+		bcc get				;すでにキーオフしていたら何もしない
 		sta VEnvPos, x		;キーオフ位置に移動
 		jmp get
 	other:
 		lda VEnvCtr, x
 		cmp #1
 		bne end				;カウンタが1でなければカウントして終了
-		cmp #0
-		beq ret				;0になったらrts
+		cmp #0				;カウンタが0になったらrts
+		beq ret
 		lda VEnvPos, x
 		ldy #1
 		cmp (Work + 2), y
@@ -1453,7 +1458,9 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		iny
 		lda (Work + 2), y	;アドレスにあるデータを取得（フレーム数）
 		sta VEnvCtr, x		;カウンタに代入
+		beq @S				;カウンタが0ならエンベロープ位置を移動しない
 		inc VEnvPos, x		;エンベロープ位置移動
+	@S:
 		lda Volume, x
 		beq frag			;0ならこれ以降処理しない
 		sta Work
@@ -1516,7 +1523,6 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 	keyon:
 		lda #1
 		sta FEnvPos, x		;キーオン位置に移動
-		lda #1
 		clc
 		adc FEnvDelay, x	;ディレイを加算
 		sta FEnvCtr, x
@@ -1528,14 +1534,16 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne other
 		ldy #1
 		lda (Work + 2), y
+		cmp FEnvPos, x
+		bcc get				;すでにキーオフしていたら何もしない
 		sta FEnvPos, x		;キーオフ位置に移動
 		jmp get
 	other:
 		lda FEnvCtr, x
 		cmp #1
 		bne end				;カウンタが1でなければカウントして終了
-		cmp #0
-		beq ret				;0になったらrts
+		cmp #0				;カウンタが0になったらrts
+		beq ret
 		lda FEnvPos, x
 		ldy #1
 		cmp (Work + 2), y
@@ -1569,9 +1577,11 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta Freq_H, x
 	next:
 		iny
-		lda (Work + 2), y		;アドレスにあるデータを取得（フレーム数）
+		lda (Work + 2), y	;アドレスにあるデータを取得（フレーム数）
 		sta FEnvCtr, x		;カウンタに代入
+		beq @S				;カウンタが0ならエンベロープ位置を移動しない
 		inc FEnvPos, x		;エンベロープ位置移動
+	@S:
 		rts
 	end:
 		dec FEnvCtr, x
@@ -1596,7 +1606,6 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 	keyon:
 		lda #1
 		sta NEnvPos, x		;キーオン位置に移動
-		lda #1
 		clc
 		adc NEnvDelay, x	;ディレイを加算
 		sta NEnvCtr, x
@@ -1608,14 +1617,16 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne other
 		ldy #1
 		lda (Work + 2), y
+		cmp NEnvPos, x
+		bcc get				;すでにキーオフしていたら何もしない
 		sta NEnvPos, x		;キーオフ位置に移動
 		jmp get
 	other:
 		lda NEnvCtr, x
 		cmp #1
 		bne end				;カウンタが1でなければカウントして終了
-		cmp #0
-		beq ret				;0になったらrts
+		cmp #0				;カウンタが0になったらrts
+		beq ret
 		lda NEnvPos, x
 		ldy #1
 		cmp (Work + 2), y
@@ -1674,9 +1685,11 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta NoteN, x
 	last:
 		iny
-		lda (Work + 2), y		;アドレスにあるデータを取得（フレーム数）
+		lda (Work + 2), y	;アドレスにあるデータを取得（フレーム数）
 		sta NEnvCtr, x		;カウンタに代入
+		beq @S				;カウンタが0ならエンベロープ位置を移動しない
 		inc NEnvPos, x		;エンベロープ位置移動
+	@S:
 		rts
 	end:
 		dec NEnvCtr, x
@@ -1701,7 +1714,6 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 	keyon:
 		lda #1
 		sta TEnvPos, x		;キーオン位置に移動
-		lda #1
 		clc
 		adc TEnvDelay, x	;ディレイを加算
 		sta TEnvCtr, x
@@ -1713,14 +1725,16 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne other
 		ldy #1
 		lda (Work + 2), y
+		cmp TEnvPos, x
+		bcc get				;すでにキーオフしていたら何もしない
 		sta TEnvPos, x		;キーオフ位置に移動
 		jmp get
 	other:
 		lda TEnvCtr, x
 		cmp #1
 		bne end				;カウンタが1でなければカウントして終了
-		cmp #0
-		beq ret				;0になったらrts
+		cmp #0				;カウンタが0になったらrts
+		beq ret
 		lda TEnvPos, x
 		ldy #1
 		cmp (Work + 2), y
@@ -1739,7 +1753,9 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		iny
 		lda (Work + 2), y		;アドレスにあるデータを取得（フレーム数）
 		sta TEnvCtr, x		;カウンタに代入
+		beq @S				;カウンタが0ならエンベロープ位置を移動しない
 		inc TEnvPos, x		;エンベロープ位置移動
+	@S:
 		rts
 	end:
 		dec TEnvCtr, x
