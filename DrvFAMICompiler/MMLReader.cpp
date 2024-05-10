@@ -573,6 +573,25 @@ void MMLReader::readDifinitions()
                                         {
                                             cmd = REST_DEFLEN;
                                         }
+                                        else if (c == 'w' || c == 'W')  //メモリ書き込み
+                                        {
+                                            cmd = MEM_WRITE;
+                                            int n;
+                                            skipSpaceUntilNextLine();
+                                            if (getMultiHex(n))       //コマンド内容を保存
+                                            {
+                                                args.push_back(0xff & n);
+                                                args.push_back((n >> 8) & 0xff);
+                                                skipSpaceUntilNextLine();
+                                                if (isNextChar(','))
+                                                {
+                                                    if (getMultiDigit(n))
+                                                    {
+                                                        args.push_back(n);
+                                                    }
+                                                }
+                                            }
+                                        }
                                         else if (c == '\n')    //改行で終了
                                         {
                                             linenum++;
@@ -1946,6 +1965,35 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 if (!res)
                 {
                     std::cerr << "Line " << linenum << " : Missing psuedo delay arguments." << std::endl;
+                    exit(1);
+                }
+            }
+            break;
+        case 'w':   //メモリ書き込み
+        case 'W':
+            if (getMultiHex(n))
+            {
+                int address, value;
+                bool res = false;
+                address = n;
+                skipSpace();
+                if (isNextChar(','))
+                {
+                    skipSpace();
+                    if (getMultiDigit(n))
+                    {
+                        value = n;
+                        data.push_back(MEM_WRITE);
+                        data.push_back(0xff & address);
+                        data.push_back((address >> 8) & 0xff);
+                        data.push_back(value);
+                        res = true;
+                    }
+                }
+
+                if (!res)
+                {
+                    std::cerr << "Line " << linenum << " : Missing Memory Write arguments." << std::endl;
                     exit(1);
                 }
             }
