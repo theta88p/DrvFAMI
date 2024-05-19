@@ -1019,7 +1019,6 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
     int n;
     int volume = 15;
     int octave = 4;
-    int fskip;
     int grace = 0;
     bool isTrack = false;
     bool isMusic = false;
@@ -1862,19 +1861,29 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     exit(1);
                 }
                 int tempo = 14400 / timebase;
-                fskip = 256 - 256 * n / tempo;
+                int fskip = 256 - 256 * n / tempo;
+                int dir;
+
+                if (fskip > 0)
+                {
+                    dir = 0;
+                }
+                else
+                {
+                    dir = 1;
+                    fskip = -fskip;
+                    //std::cerr << "Line " << linenum << " : Max tempo is " << tempo << std::endl;
+                    //std::cerr << "Please reduce timebase." << std::endl;
+                    //exit(1);
+                }
 
                 if (fskip > 255)
                 {
                     fskip = 255;
                 }
-                else if (fskip < 0)
-                {
-                    std::cerr << "Line " << linenum << " : Max tempo is " << tempo << std::endl;
-                    std::cerr << "Please reduce timebase." << std::endl;
-                    exit(1);
-                }
+
                 data.push_back(TEMPO);
+                data.push_back(dir);
                 data.push_back(fskip);
             }
             break;

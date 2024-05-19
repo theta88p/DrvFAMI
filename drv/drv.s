@@ -88,8 +88,9 @@ LoopAddr_L:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先L
 LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 
 IsProc:			.res	1	;処理中フラグ。0で処理中
-SkipCtr:		.res	1	;スキップカウンタ
-SkipFreq:		.res	1	;スキップカウンタに加算する値
+SpdCtr:			.res	1	;速度カウンタ
+SpdFreq:		.res	1	;速度カウンタに加算する値
+SpdDir:			.res	1	;速度方向（0:減速 1:加速）
 ProcTr:			.res	1	;処理中のトラック
 SeqAddr_L:		.res	1	;シーケンス情報のアドレスL
 SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
@@ -151,14 +152,27 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta IsProc
 		ldx #LAST_TRACK
 		jsr pretrack	;トラック処理の前に毎フレームやる処理をここでやる
-		lda SkipCtr
+		lda SpdCtr
 		clc
-		adc SkipFreq
-		sta SkipCtr
-		bcs skip		;SkipFreqを足していって桁上がりしたらスキップ
+		adc SpdFreq
+		sta SpdCtr
+		php
+		lda SpdDir
+		bne acc			;加速の場合
+		plp
+		bcs env		;SpdFreqを足していって桁上がりしたらスキップ
 		ldx #LAST_TRACK
 		jsr track		;トラック処理
-	skip:
+		jmp env
+	acc:
+		plp
+		bcc single		;桁上がりしたら二重処理
+		ldx #LAST_TRACK
+		jsr track		;トラック処理
+	single:
+		ldx #LAST_TRACK
+		jsr track		;トラック処理
+	env:
 		ldx #LAST_TRACK
 		jsr envelope	;エンベロープと書き込み処理は毎フレームやる
 	iend:
@@ -201,11 +215,11 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta $e000
 .endif
 		lda #0
-		sta SkipCtr
+		sta SpdCtr
 		sta ProcTr
 		lda #0
-		sta SkipFreq
-		sta SkipCtr
+		sta SpdFreq
+		sta SpdCtr
 		
 		lda #1
 		sta IsProc
@@ -614,8 +628,11 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne l78
 		ldy #1
 		lda (Work), y
-		sta SkipFreq
-		lda #2
+		sta SpdDir
+		ldy #2
+		lda (Work), y
+		sta SpdFreq
+		lda #3
 		jsr addptr
 		rts
 	l78:
