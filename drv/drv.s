@@ -1,5 +1,5 @@
 .exportzp	Frags
-.export		IsProc
+.export		DrvFrags
 .export		Device
 .export		Octave
 .export		NoteN
@@ -87,10 +87,9 @@ LoopN:		.res	MAX_TRACK * MAX_LOOP	;残りループ回数
 LoopAddr_L:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先L
 LoopAddr_H:	.res	MAX_TRACK * MAX_LOOP	;ループの戻り先H
 
-IsProc:			.res	1	;処理中フラグ。0で処理中
+DrvFrags:		.res	1	;ドライバ全体のフラグ
 SpdCtr:			.res	1	;速度カウンタ
 SpdFreq:		.res	1	;速度カウンタに加算する値
-SpdDir:			.res	1	;速度方向（0:減速 1:加速）
 ProcTr:			.res	1	;処理中のトラック
 SeqAddr_L:		.res	1	;シーケンス情報のアドレスL
 SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
@@ -144,20 +143,23 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 .code
 
 .proc drv_main
-		lda IsProc
+		lda DrvFrags
+		and #DRV_IS_PROC
 		bne start
 		rts
 	start:
-		lda #0
-		sta IsProc
+		lda DrvFrags
+		ora #DRV_IS_PROC
+		sta DrvFrags
 		ldx #LAST_TRACK
 		jsr pretrack	;トラック処理の前に毎フレームやる処理をここでやる
 		lda SpdCtr
 		clc
 		adc SpdFreq
-		sta SpdCtr
 		php
-		lda SpdDir
+		sta SpdCtr
+		lda DrvFrags
+		and #DRV_SKIP_DIR
 		bne acc			;加速の場合
 		plp
 		bcs env		;SpdFreqを足していって桁上がりしたらスキップ
@@ -169,6 +171,13 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bcc single		;桁上がりしたら二重処理
 		ldx #LAST_TRACK
 		jsr track		;トラック処理
+		ldx #LAST_TRACK
+		jsr envelope
+		ldx #LAST_TRACK
+		jsr pretrack
+		lda DrvFrags
+		ora #DRV_DOUBLE
+		sta DrvFrags
 	single:
 		ldx #LAST_TRACK
 		jsr track		;トラック処理
@@ -176,8 +185,10 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		ldx #LAST_TRACK
 		jsr envelope	;エンベロープと書き込み処理は毎フレームやる
 	iend:
-		lda #1
-		sta IsProc
+		lda DrvFrags
+		ora #DRV_IS_PROC
+		and #DRV_DOUBLE_CLR
+		sta DrvFrags
 		rts
 .endproc
 
@@ -221,8 +232,9 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta SpdFreq
 		sta SpdCtr
 		
-		lda #1
-		sta IsProc
+		lda DrvFrags
+		ora #DRV_IS_PROC
+		sta DrvFrags
 		rts
 .endproc
 
@@ -628,7 +640,15 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne l78
 		ldy #1
 		lda (Work), y
-		sta SpdDir
+		beq @dec
+		lda DrvFrags
+		ora #DRV_SKIP_DIR
+		jmp @next
+	@dec:
+		lda DrvFrags
+		and #DRV_SKIP_DIR_CLR
+	@next:
+		sta DrvFrags
 		ldy #2
 		lda (Work), y
 		sta SpdFreq
@@ -1347,7 +1367,10 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda Frags, x
 		and #FRAG_KEYON
 		bne keyon
-		jmp start
+		lda DrvFrags
+		and #DRV_DOUBLE
+		beq start
+		rts
 	keyon:
 		lda NoteN, x
 		clc
@@ -1433,7 +1456,10 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda Frags, x
 		and #FRAG_KEYON
 		bne keyon
-		jmp other
+		lda DrvFrags
+		and #DRV_DOUBLE
+		beq other
+		rts
 	keyon:
 		lda #1
 		sta VEnvPos, x		;キーオン位置に移動
@@ -1536,7 +1562,10 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda Frags, x
 		and #FRAG_KEYON
 		bne keyon
-		jmp other
+		lda DrvFrags
+		and #DRV_DOUBLE
+		beq other
+		rts
 	keyon:
 		lda #1
 		sta FEnvPos, x		;キーオン位置に移動
@@ -1619,7 +1648,10 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda Frags, x
 		and #FRAG_KEYON
 		bne keyon
-		jmp other
+		lda DrvFrags
+		and #DRV_DOUBLE
+		beq other
+		rts
 	keyon:
 		lda #1
 		sta NEnvPos, x		;キーオン位置に移動
@@ -1728,7 +1760,10 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda Frags, x
 		and #FRAG_KEYON
 		bne keyon
-		jmp other
+		lda DrvFrags
+		and #DRV_DOUBLE
+		beq other
+		rts
 	keyon:
 		lda #1
 		sta TEnvPos, x		;キーオン位置に移動
