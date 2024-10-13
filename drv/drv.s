@@ -991,7 +991,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		rts
 	lf6:
 		cmp #$f6	;ソフトウェアスイープ
-		bne lf7				;引数は開始周波数（+-半音単位）、終了周波数、Delay、Speed
+		bne lf7				;引数は終了周波数（+-半音単位）、Delay、Speed。開始周波数はノートの方を変更する。
 		lda EnvFrags, x
 		ora #FRAG_SSWP		;フラグを立てる
 		sta EnvFrags, x
@@ -1474,8 +1474,6 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne other
 		ldy #1
 		lda (Work + 2), y
-		cmp VEnvPos, x
-		bcc get				;すでにキーオフしていたら何もしない
 		sta VEnvPos, x		;キーオフ位置に移動
 		jmp get
 	other:
@@ -1580,8 +1578,6 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne other
 		ldy #1
 		lda (Work + 2), y
-		cmp FEnvPos, x
-		bcc get				;すでにキーオフしていたら何もしない
 		sta FEnvPos, x		;キーオフ位置に移動
 		jmp get
 	other:
@@ -1666,8 +1662,6 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne other
 		ldy #1
 		lda (Work + 2), y
-		cmp NEnvPos, x
-		bcc get				;すでにキーオフしていたら何もしない
 		sta NEnvPos, x		;キーオフ位置に移動
 		jmp get
 	other:
@@ -1778,8 +1772,6 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne other
 		ldy #1
 		lda (Work + 2), y
-		cmp TEnvPos, x
-		bcc get				;すでにキーオフしていたら何もしない
 		sta TEnvPos, x		;キーオフ位置に移動
 		jmp get
 	other:
