@@ -1410,22 +1410,24 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 	detect:
 		lda SSwpEnd, x			;終了判定
 		bpl pos
-		lda RefFreq_H, x	;変化がマイナス方向の場合
-		cmp SSwpEndFreq_H, x
+		lda SSwpEndFreq_H, x	;変化がマイナス方向の場合
+		cmp RefFreq_H, x
 		bcc end					;終了値より大きくなったら終了
+		bne next				;終了値より小さかったら次へ
 		lda RefFreq_L, x
 		cmp SSwpEndFreq_L, x			;下位バイトも比較
-		bcc end
-		jmp clear
+		bcc next
+		jmp end
 	pos:
 		lda SSwpEndFreq_H, x			;変化がプラス方向の場合
 		cmp RefFreq_H, x
-		bcc end					;終了値より小さくなったら終了（レジスタ値が小さい方が高いので）
+		bcc next				;終了値より大きかったら次へ
+		bne end					;終了値より小さくなったら終了（レジスタ値が小さい方が高いので）
 		lda SSwpEndFreq_L, x
 		cmp RefFreq_L, x
-		bcc end
-		jmp clear
-	end:
+		bcc next
+		jmp end
+	next:
 		lda RefFreq_L, x
 		sta Freq_L, x
 		lda RefFreq_H, x
@@ -1433,7 +1435,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda SSwpRate, x			;Rateをカウンタに代入して抜ける
 		sta SSwpCtr, x
 		rts
-	clear:
+	end:
 		lda SSwpEndFreq_L, x	;終了値を代入
 		sta RefFreq_L, x
 		sta Freq_L, x
