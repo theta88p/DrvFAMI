@@ -59,9 +59,9 @@
 #define DEV_2A03_DPCM		4
 #define DEV_VRC6_SQR1		5
 #define DEV_VRC6_SQR2		6
-#define DEV_MMC5_SQR1		7
-#define DEV_MMC5_SQR2		8
-#define DEV_VRC6_SAW		9
+#define DEV_VRC6_SAW		7
+#define DEV_MMC5_SQR1		8
+#define DEV_MMC5_SQR2		9
 #define DEV_SS5B_SQR1		10
 #define DEV_SS5B_SQR2		11
 #define DEV_SS5B_SQR3		12
