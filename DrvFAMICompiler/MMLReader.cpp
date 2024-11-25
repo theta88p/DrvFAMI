@@ -1088,7 +1088,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
         case 'e':
         case 'f':
         case 'g':
-            nn = notetbl[c - tmp - 0x61] + (octave + 1) * 12;
+            nn = notetbl[c - tmp - 0x61] + octave * 12;
             skipSpace();
             while (getc(c))          //半音
             {
@@ -2928,7 +2928,7 @@ bool MMLReader::getNoteNumber(int& nn)
 
     if (getMultiDigit(n))
     {
-        nn += (n + 1) * 12;
+        nn += n * 12;
     }
     else
     {

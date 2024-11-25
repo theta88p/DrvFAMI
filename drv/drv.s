@@ -1225,15 +1225,15 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		ldy #0
 	oct:
 		cmp #12
-		bcc @N
+		bcc load
 		sec
 		sbc #12
 		iny
 		jmp oct
-	@N:
-		dey				;ノートナンバー0は-1オクターブなので1オクターブ下げる
-		bpl load
-		ldy #0			;マイナスになったらゼロに
+	;@N:
+		;dey				;ノートナンバー0は-1オクターブなので1オクターブ下げる
+		;bpl load
+		;ldy #0			;マイナスになったらゼロに
 	load:
 		pha				;周波数テーブルから周波数を取得
 		tya
