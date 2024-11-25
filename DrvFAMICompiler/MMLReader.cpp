@@ -1989,7 +1989,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 if (isNextChar(','))
                 {
                     skipSpace();
-                    if (getMultiDigit(n))
+                    if (getMultiHex(n))
                     {
                         value = n;
                         data.push_back(MEM_WRITE);
