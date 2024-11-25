@@ -24,7 +24,7 @@
     <ProjectGuid>{98317af0-3eaa-4863-8a8b-4377b2849c34}</ProjectGuid>
     <RootNamespace>DrvFAMICompiler</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>DrvFAMICompiler</ProjectName>
+    <ProjectName>drvfamic</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -145,13 +145,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\WSAudioCore\CEnvGen.cpp" />
-    <ClCompile Include="..\WSAudioCore\COscillator.cpp" />
-    <ClCompile Include="..\WSAudioCore\CSampleRateConverter.cpp" />
-    <ClCompile Include="..\WSAudioCore\CVoice.cpp" />
-    <ClCompile Include="..\WSAudioCore\CVoiceManager.cpp" />
-    <ClCompile Include="..\WSAudioCore\LFO.cpp" />
-    <ClCompile Include="..\WSAudioCore\WaveFrom.cpp" />
     <ClCompile Include="DrvFAMICompiler.cpp" />
     <ClCompile Include="FileWriter.cpp" />
     <ClCompile Include="MMLReader.cpp" />
@@ -160,13 +153,6 @@
     <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\WSAudioCore\CEnvGen.h" />
-    <ClInclude Include="..\WSAudioCore\COscillator.h" />
-    <ClInclude Include="..\WSAudioCore\CSampleRateConverter.h" />
-    <ClInclude Include="..\WSAudioCore\CVoice.h" />
-    <ClInclude Include="..\WSAudioCore\CVoiceManager.h" />
-    <ClInclude Include="..\WSAudioCore\LFO.h" />
-    <ClInclude Include="..\WSAudioCore\WaveForm.h" />
     <ClInclude Include="cmpByStringLength.h" />
     <ClInclude Include="DpcmInfo.h" />
     <ClInclude Include="EnvData.h" />
