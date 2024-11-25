@@ -20,7 +20,7 @@ int wmain(int argc, wchar_t* argv[])
     bool nes = false;
 
     std::wcout.imbue(std::locale("Japanese"));
-    std::wcout << "DrvFAMI MML Compiler v0.2.3  (c) theta 2024" << std::endl;
+    std::wcout << "DrvFAMI MML Compiler v0.2.4  (c) theta 2024" << std::endl;
     std::wcout << std::endl;
 
     if (argc < 2)
