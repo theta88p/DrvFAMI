@@ -366,8 +366,8 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda Frags, x
 		;ロードフラグを立てる
 		ora #FRAG_LOAD
-		;キーオン・キーオフ・書き込み無効フラグを降ろす
-		and #FRAG_KEYON_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
+		;キーオン・キーオフ・キーオン無効・書き込み無効フラグを降ろす
+		and #FRAG_KEYON_CLR & FRAG_KEYON_DIS_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
 		sta Frags, x
 		dex
 		bpl start
@@ -449,9 +449,9 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		ora #FRAG_KEYON					;キーオンフラグを立てる
 		sta Frags, x
 	@N:
-		;キーオン無効・ロードフラグを降ろす
+		;ロードフラグを降ろす
 		lda Frags, x
-		and #FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
+		and #FRAG_LOAD_CLR
 		sta Frags, x
 		lda EnvFrags, x
 		and #FRAG_ENV_DIS_CLR	;エンベロープ無効フラグを降ろす
@@ -466,8 +466,8 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne l6d
 		lda Frags, x
 		ora #FRAG_KEYOFF						;キーオフフラグを立てる
-		;キーオン無効・ロードフラグを降ろす
-		and #FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
+		;ロードフラグを降ろす
+		and #FRAG_LOAD_CLR
 		sta Frags, x
 		lda DefLen, x
 		sta Length, x
@@ -817,9 +817,9 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		ora #FRAG_KEYON					;キーオンフラグを立てる
 		sta Frags, x
 	@N:
-		;キーオン無効・ロードフラグを降ろす
+		;ロードフラグを降ろす
 		lda Frags, x
-		and #FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
+		and #FRAG_LOAD_CLR
 		sta Frags, x
 		lda EnvFrags, x
 		and #FRAG_ENV_DIS_CLR	;エンベロープ無効フラグを降ろす
@@ -835,8 +835,8 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		bne led
 		lda Frags, x
 		ora #FRAG_KEYOFF						;キーオフフラグを立てる
-		;キーオン無効・ロードフラグを降ろす
-		and #FRAG_KEYON_DIS_CLR & FRAG_LOAD_CLR
+		;ロードフラグを降ろす
+		and #FRAG_LOAD_CLR
 		sta Frags, x
 		ldy #1
 		lda (Work), y
@@ -1101,7 +1101,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda Length, x
 		sta LenCtr, x
 		lda Frags, x
-		and #FRAG_KEYON		;キーオンでない場合
+		and #FRAG_KEYON | FRAG_KEYON_DIS ;キーオンかキーオン無効の場合ゲートリセット
 		beq next
 		lda Gate, x
 		and #%00111111
