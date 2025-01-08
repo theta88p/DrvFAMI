@@ -1901,17 +1901,36 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 	noi:
 		cmp #DEV_2A03_NOISE
 		bne pcm
-		lda Volume, x
-		ora #%00110000
-		sta $400c
+		lda HEnvReg, x
+		and #%00010000		;ハードウェアエンベロープが有効なら以下を実行
+		bne softenv
+		lda Frags, x
+		and #FRAG_KEYOFF
+		bne softenv
+		lda Frags, x
+		and #FRAG_KEYON
+		beq r400e
+		lda #%00001000
+		sta $400f
+		lda HEnvReg, x
+		jmp r400c
+	softenv:
+		lda #%00001000
+		sta $400f
+		lda #%00110000
+		ora Volume, x
+	r400c:
+		sta $400c, y
+		lda Volume, x		;音量が0ならこれ以降は処理しない
+		bne r400e
+		jmp writereg_end
+	r400e:
 		lda Tone, x
 		clc
 		ror a
 		ror a
 		ora NoteN, x
 		sta $400e
-		lda #%11111000
-		sta $400f
 		jmp writereg_end
 	pcm:
 		cmp #DEV_2A03_DPCM
