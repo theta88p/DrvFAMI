@@ -2024,12 +2024,21 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		and #%00010000		;ハードウェアエンベロープが有効なら以下を実行
 		bne softenv
 		lda Frags, x
+		and #FRAG_KEYOFF
+		bne hweoff
+		lda Frags, x
 		and #FRAG_KEYON
 		beq hws
 		lda Work
 		ora HEnvReg, x
 		sta $4000, y
 		jmp hws
+	hweoff:
+		lda Work
+		ora #%00110000
+		ora Volume, x
+		sta $4000, y
+		jmp r4003
 	softenv:
 		lda Work
 		ora #%00110000
