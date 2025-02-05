@@ -1920,7 +1920,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda #%00110000
 		ora Volume, x
 	r400c:
-		sta $400c, y
+		sta $400c
 		lda Volume, x		;音量が0ならこれ以降は処理しない
 		bne r400e
 		jmp writereg_end
