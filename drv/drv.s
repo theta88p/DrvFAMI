@@ -1529,9 +1529,13 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		ror Work
 		lsr Work + 1
 		ror Work
+		lda Work
+		cmp #1				;3bit右シフトした時点で1の場合そのまま終了（四捨五入）
+		beq @E
 		lsr Work + 1
 		ror Work
 		lda Work
+	@E:
 		sta Volume, x
 		lda Frags, x		;無音フラグを降ろす
 		and #FRAG_SIL_CLR
