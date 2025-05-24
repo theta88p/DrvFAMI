@@ -632,7 +632,10 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		ldy #2
 		lda (Work), y
 		sta $4013
-		lda #3
+		ldy #3
+		lda (Work), y
+		sta TrVolume, x
+		lda #4
 		jsr addptr
 		rts
 	l77:
@@ -1949,7 +1952,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda NoteN, x
 		sta $4010
 		lda Volume, x
-		beq @N
+		bmi @N
 		sta $4011
 	@N:
 		lda #%00001111
