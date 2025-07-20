@@ -66,6 +66,8 @@ CP      = copy
 	$(AS) drv.s $(ASFLAGS) -D VRC6=1 -o drv_vrc6.o 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 	@echo [Assemble] : drv.s >>$(ERRLOG_FILE)
 	$(AS) drv.s $(ASFLAGS) -D SS5B=1 -o drv_ss5b.o 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+	@echo [Assemble] : drv.s >>$(ERRLOG_FILE)
+	$(AS) drv.s $(ASFLAGS) -D FDS=1 -o drv_fds.o 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
 
 %.s : %.mml $(DMC_FILES)		#;".dmc"ファイルが更新された場合は、.mmlは、全部コンパイルする。
@@ -103,37 +105,46 @@ LIB_FILES =
 
 #---------------
 #; リンカーの設定
-CFG_NSF_FILE   =	nsf.cfg
-MAP_NSF_FILE   =	drv.map
-DBG_NSF_FILE   =	drv.dbg
-
 ifdef DEBUG
+CFG_NSF_FILE   =	nsfd.cfg
 CFG_DSP_FILE   =	nesd.cfg
+
 else
+CFG_NSF_FILE   =	nsf.cfg
 CFG_DSP_FILE   =	nes.cfg
 endif
+
+MAP_NSF_FILE   =	dbg.map
+DBG_NSF_FILE   =	dbg.dbg
+
 MAP_DSP_FILE   =	dsp.map
 DBG_DSP_FILE   =	dsp.dbg
 
 #---------------
 #; ソースファイル
+ifdef DEBUG
+
 MAIN_NSF_FILES =	main_nsf.o		\
 					nsf.o			\
 					crt0_nsf.o		\
-					data_nsf.o		\
-
-ifdef DEBUG
+					data_nsf_dbg.o	\
+					drv_fds.o		\
 
 MAIN_DSP_FILES =	ines.o			\
 					crt0_nes.o		\
 					nmi_main_nes.o	\
 					irq_main.o		\
 					main_nes.o		\
-					drv.o			\
+					drv_fds.o		\
 					data_dbg.o		\
 					dsp.o			\
 
 else
+
+MAIN_NSF_FILES =	main_nsf.o		\
+					nsf.o			\
+					crt0_nsf.o		\
+					data_nsf.o		\
 
 MAIN_DSP_FILES =	ines.o			\
 					crt0_nes.o		\
@@ -160,9 +171,13 @@ dsp.nes : $(MAIN_DSP_FILES) $(CHR_FILES)
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
 	$(LINKER) $(LD_DSP_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
+#dbg.nsf : $(MAIN_NSF_FILES)
+#	@echo [Link] : $@ >>$(ERRLOG_FILE)
+#	$(LINKER) $(LD_NSF_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+
 else
 
-all : drv.bin drv_mmc5.bin drv_vrc6.bin drv_ss5b.bin dsp.bin
+all : drv.bin drv_mmc5.bin drv_vrc6.bin drv_ss5b.bin drv_fds.bin dsp.bin
 
 drv.bin : drv.o $(MAIN_NSF_FILES)
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
@@ -180,6 +195,10 @@ drv_ss5b.bin : drv_ss5b.o $(MAIN_NSF_FILES)
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
 	$(LINKER) $(LD_NSF_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
 
+drv_fds.bin : drv_fds.o $(MAIN_NSF_FILES)
+	@echo [Link] : $@ >>$(ERRLOG_FILE)
+	$(LINKER) $(LD_NSF_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
+
 dsp.bin : $(MAIN_DSP_FILES) $(CHR_FILES) 
 	@echo [Link] : $@ >>$(ERRLOG_FILE)
 	$(LINKER) $(LD_DSP_FLAGS) $@ $^ 1>>$(LOG_FILE) 2>>$(ERRLOG_FILE)
@@ -191,6 +210,7 @@ endif
 #; Crean up
 clean:
 	@$(RM) *.nes		#NESファイルは、消さないでおく。
+	@$(RM) *.nsf
 	@$(RM) *.bak
 	@$(RM) *.map
 	@$(RM) *.lst
