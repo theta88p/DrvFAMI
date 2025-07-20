@@ -51,6 +51,9 @@
 #define ENV_DISABLE			0xf8
 #define MEM_WRITE			0xf9
 #define SUBROUTINE			0xfa
+#define FDS_MOD_FREQ		0xfb
+#define FDS_MOD_TONE		0xfc
+#define FDS_MOD_ENV			0xfd
 
 #define DEV_2A03_SQR1		0
 #define DEV_2A03_SQR2		1
@@ -65,6 +68,7 @@
 #define DEV_SS5B_SQR1		10
 #define DEV_SS5B_SQR2		11
 #define DEV_SS5B_SQR3		12
+#define DEV_FDS				13
 
 enum ExtDev
 {
@@ -120,8 +124,9 @@ private:
 	void readDifinitions();
 	void readSubRoutine(int& subsize);
 	void readEnvelope(int& envsize);
-	void readBrackets(int startpos, int trackheadsize, std::vector<unsigned char>& data);
-	void readMusic(int music, std::vector<unsigned char>& trackdata);
+	void readBrackets(int startpos, int trackheadsize, std::vector<unsigned char>& trhead, std::vector<unsigned char>& trbody);
+	void readWaveData(std::vector<unsigned char>& out);
+	void readModData(std::vector<unsigned char>& out);
 	void getCmdArgs(CommandArgs& args);
 	bool getNoteNumber(int& nn);
 

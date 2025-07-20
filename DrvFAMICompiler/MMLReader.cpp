@@ -40,6 +40,10 @@ void MMLReader::readMML()
     std::map<std::string, std::string, cmpByStringLength> macrolist;
     std::vector<unsigned char> head;
     std::vector<unsigned char> body;
+    std::vector<unsigned char> fds_wavdata;
+	std::vector<unsigned char> fds_moddata;
+	int fds_wavaddr = 0;
+    int fds_modaddr = 0;
     std::ifstream ifs;
 
     ifs.open(inputPath);
@@ -109,6 +113,25 @@ void MMLReader::readMML()
     ss.clear();
     ss.seekg(0);    //読み込み位置を戻す
     
+    if (extdevice & ExtDev::FDS)
+    {
+        readWaveData(fds_wavdata);
+		std::copy(fds_wavdata.begin(), fds_wavdata.end(), std::back_inserter(body));
+        fds_wavaddr = totalpos;
+		totalpos += fds_wavdata.size();
+        linenum = 1;
+        ss.clear();
+        ss.seekg(0);    //読み込み位置を戻す
+        readModData(fds_moddata);
+		std::copy(fds_moddata.begin(), fds_moddata.end(), std::back_inserter(body));
+		fds_modaddr = totalpos;
+		totalpos += fds_moddata.size();
+    }
+
+    linenum = 1;
+    ss.clear();
+    ss.seekg(0);    //読み込み位置を戻す
+
     int envsize = 0;
     readEnvelope(envsize);
     totalpos += envsize;
@@ -137,6 +160,7 @@ void MMLReader::readMML()
 
     for (int i = 0; i < music; i++)
     {
+		std::vector<unsigned char> trhead;
         std::vector<unsigned char> musdata;
         findStr("music");
         skipSpace();
@@ -172,11 +196,27 @@ void MMLReader::readMML()
 
                 //トラック数 x 4byte（トラックのアドレスとトラック番号と音源番号） + トラックヘッダの終端コード + デフォ音長データ
                 int trheadsize = track * 4 + 1 + 1;
+                if (extdevice & ExtDev::FDS)
+                {
+					trheadsize += 4; //FDSの波形アドレス分
+                }
 
-                readBrackets(ss.tellg(), trheadsize, musdata);
+                readBrackets(ss.tellg(), trheadsize, trhead, musdata);
+                trhead.push_back(0xff);             //トラックヘッダ終端
+                trhead.push_back(lengthtbl[3]);     //デフォルトのデフォルト音長（4分音符）
+
+                if (extdevice & ExtDev::FDS)
+                {
+                    trhead.push_back(fds_wavaddr & 0xff); //FDSの波形アドレス
+                    trhead.push_back(fds_wavaddr >> 8);
+                    trhead.push_back(fds_modaddr & 0xff); //FDSのモジュレータ波形アドレス
+                    trhead.push_back(fds_modaddr >> 8);
+                }
+
+                std::copy(trhead.begin(), trhead.end(), std::back_inserter(body));
                 std::copy(musdata.begin(), musdata.end(), std::back_inserter(body));
-                head.push_back(totalpos & 0x00ff);
-                head.push_back((totalpos & 0xff00) >> 8);
+                head.push_back(totalpos & 0xff);
+                head.push_back(totalpos >> 8);
                 totalpos += musdata.size();
 
                 linenum = 1;
@@ -185,6 +225,7 @@ void MMLReader::readMML()
             }
         }
     }
+
 
     std::copy(head.begin(), head.end(), std::back_inserter(seqdata));
     std::copy(body.begin(), body.end(), std::back_inserter(seqdata));
@@ -839,15 +880,16 @@ void MMLReader::readSubRoutine(int& subsize)
                     if (isNextChar('{'))
                     {
                         int pos = ss.tellg();
-                        std::vector<unsigned char> data;
-                        readBrackets(pos, 0, data);
+                        std::vector<unsigned char> trhead;
+						std::vector<unsigned char> trbody;
+                        readBrackets(pos, 0, trhead, trbody);
                         SubData sd;
                         sd.num = n;
                         sd.addr = totalpos + subsize;
-                        data.push_back(LOOP_MID_END);    //ループ途中終了コードで戻る
-                        sd.data = data;
+                        trbody.push_back(LOOP_MID_END);    //ループ途中終了コードで戻る
+                        sd.data = trbody;
                         subdata[n] = sd;
-                        subsize += data.size();
+                        subsize += trbody.size();
                     }
                 }
             }
@@ -1024,7 +1066,280 @@ void MMLReader::readEnvelope(int& envsize)
 }
 
 
-void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned char>& data)
+void MMLReader::readWaveData(std::vector<unsigned char>& out)
+{
+    char c;
+    int n;
+    bool isTrack = false;
+    bool isMusic = false;
+    out.clear();
+    std::map<int, std::vector<unsigned char>> wavdata;
+
+    while (ss.get(c))
+    {
+	    bool fdsw = false;
+        bool n163w = false;
+        skipSpace();
+        skipComment();
+
+        if (c == '@')   //音色指定か各種定義
+        {
+            if (!isTrack && !isMusic)
+            {
+                skipSpace();
+                if (isNextStr("fdsw"))
+                {
+                    fdsw = true;
+                }
+                else if (isNextStr("n163w"))
+                {
+                    n163w = true;
+                }
+
+                if (fdsw || n163w)
+                {
+                    if (isTrack)
+                    {
+                        std::cerr << "Line " << linenum << " : Do not write wave difinition in the track." << std::endl;
+                        exit(1);
+                    }
+
+                    if (isMusic)
+                    {
+                        std::cerr << "Line " << linenum << " : Do not write wave difinition in the music." << std::endl;
+                        exit(1);
+                    }
+                    skipSpace();
+                    if (getMultiDigit(n))
+                    {
+                        int wavnum = n;
+                        if (wavdata.count(n))   //多重定義防止
+                        {
+                            std::cerr << "Line " << linenum << " : [Wave difinition] Wave #" << wavnum << " is already exists." << std::endl;
+                            exit(1);
+                        }
+
+                        skipSpace();
+                        if (isNextChar('{'))
+                        {
+                            while (!ss.eof())
+                            {
+                                skipSpace();
+                                if (getMultiDigit(n))
+                                {
+                                    if (fdsw)
+                                    {
+                                        if (n < 0 || n > 63)
+                                        {
+                                            std::cerr << "Line " << linenum << " : [Wave difinition] Waveform data must be 0 to 63." << std::endl;
+                                            exit(1);
+                                        }
+
+                                        if (wavdata[wavnum].size() >= 64)
+                                        {
+                                            std::cerr << "Line " << linenum << " : [Wave difinition] Too many waveform data." << std::endl;
+                                            exit(1);
+                                        }
+                                    }
+
+                                    wavdata[wavnum].push_back(n);
+                                }
+                                else if (getc(c))
+                                {
+                                    if (c == '}')
+                                    {
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        std::cerr << "Line " << linenum << " : [Wave difinition] Invalid character." << std::endl;
+                                        exit(1);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            std::cerr << "Line " << linenum << " : [Wave difinition] Missing {." << std::endl;
+                            exit(1);
+                        }
+                    }
+                    else
+                    {
+                        std::cerr << "Line " << linenum << " : [Wave difinition] No wave number." << std::endl;
+                        exit(1);
+                    }
+                }
+            }
+        }
+        else if (c == '\n')
+        {
+            linenum++;
+        }
+        else if (c == 't' || c == 'T')
+        {
+            if (isNextStr("rack"))
+            {
+                isTrack = true;
+            }
+        }
+        else if (c == 'm' || c == 'M')
+        {
+            if (isNextStr("usic"))
+            {
+                isMusic = true;
+            }
+        }
+    }
+
+    for (const auto& [wavnum, data] : wavdata)
+    {
+        std::copy(data.begin(), data.end(), std::back_inserter(out));
+    }
+}
+
+void MMLReader::readModData(std::vector<unsigned char>& out)
+{
+    char c;
+    int n;
+    bool isTrack = false;
+    bool isMusic = false;
+    out.clear();
+    std::map<int, std::vector<unsigned char>> moddata;
+
+    while (ss.get(c))
+    {
+        bool fdsm = false;
+        skipSpace();
+        skipComment();
+
+        if (c == '@')   //音色指定か各種定義
+        {
+            if (!isTrack && !isMusic)
+            {
+                skipSpace();
+                if (isNextStr("fdsm"))
+                {
+                    fdsm = true;
+                }
+
+                if (fdsm)
+                {
+                    if (isTrack)
+                    {
+                        std::cerr << "Line " << linenum << " : Do not write modulation difinition in the track." << std::endl;
+                        exit(1);
+                    }
+
+                    if (isMusic)
+                    {
+                        std::cerr << "Line " << linenum << " : Do not write modulation difinition in the music." << std::endl;
+                        exit(1);
+                    }
+                    skipSpace();
+                    if (getMultiDigit(n))
+                    {
+                        int wavnum = n;
+                        if (moddata.count(n))   //多重定義防止
+                        {
+                            std::cerr << "Line " << linenum << " : [Modulation difinition] Wave #" << wavnum << " is already exists." << std::endl;
+                            exit(1);
+                        }
+
+                        skipSpace();
+                        if (isNextChar('{'))
+                        {
+                            while (!ss.eof())
+                            {
+                                skipSpace();
+                                if (getMultiDigit(n))
+                                {
+                                    if (fdsm)
+                                    {
+                                        if (n < 0 || n > 8)
+                                        {
+                                            std::cerr << "Line " << linenum << " : [Modulation difinition] Modulation waveform data must be 0 to 8." << std::endl;
+                                            exit(1);
+                                        }
+
+                                        if (moddata[wavnum].size() >= 32)
+                                        {
+                                            std::cerr << "Line " << linenum << " : [Modulation difinition] Too many modulation waveform data." << std::endl;
+                                            exit(1);
+                                        }
+                                    }
+
+                                    moddata[wavnum].push_back(n);
+                                }
+                                else if (getc(c))
+                                {
+                                    if (c == '}')
+                                    {
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        std::cerr << "Line " << linenum << " : [Modulation difinition] Invalid character." << std::endl;
+                                        exit(1);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            std::cerr << "Line " << linenum << " : [Modulation difinition] Missing {." << std::endl;
+                            exit(1);
+                        }
+                    }
+                    else
+                    {
+                        std::cerr << "Line " << linenum << " : [Modulation difinition] No wave number." << std::endl;
+                        exit(1);
+                    }
+                }
+            }
+        }
+        else if (c == '\n')
+        {
+            linenum++;
+        }
+        else if (c == 't' || c == 'T')
+        {
+            if (isNextStr("rack"))
+            {
+                isTrack = true;
+            }
+        }
+        else if (c == 'm' || c == 'M')
+        {
+            if (isNextStr("usic"))
+            {
+                isMusic = true;
+            }
+        }
+    }
+
+
+    for (const auto& [wavnum, data] : moddata)
+    {
+        int temp = 0;
+        for (int i = 0; i < data.size(); i++)
+        {
+            if (i % 2 == 0)   //2バイトごとに1バイトにまとめる
+            {
+                temp = data[i];
+            }
+            else
+            {
+                temp |= (data[i] << 4);
+                out.push_back(temp);
+            }
+		}
+    }
+}
+
+
+void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned char>& trhead, std::vector<unsigned char>& trbody)
 {
     char c;
     int n;
@@ -1045,6 +1360,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
     std::vector<TrackData> tracks;
     TrackData tr;
     std::queue<unsigned char> prevnotes;
+	std::vector<unsigned char> data;
 
     ss.seekg(startpos);
 
@@ -1593,6 +1909,138 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     data.push_back(n);
                 }
             }
+            else if (isNextStr("fds"))
+            {
+                if ((extdevice & ExtDev::FDS) && tr.device == DEV_FDS)
+                {
+                    if (isNextChar('m'))   //FDSモジュレータ番号指定
+                    {
+                        skipSpace();
+                        if (getMultiDigit(n))
+                        {
+                            if (n >= 0)
+                            {
+                                data.push_back(FDS_MOD_TONE);
+                                data.push_back(n);
+                            }
+                            else
+                            {
+                                std::cerr << "Line " << linenum << " : FDS mod number must be 0 or more" << std::endl;
+                                exit(1);
+                            }
+                        }
+                        else
+                        {
+                            std::cerr << "Line " << linenum << " : FDS mod number is not specified." << std::endl;
+                            exit(1);
+                        }
+					}
+                    else if (isNextChar('e'))   //FDSモジュレーションエンベロープ指定
+                    {
+                        skipSpace();
+                        if (getMultiDigit(n))
+                        {
+                            if (n >= 0 && n < 2)
+                            {
+                                int d = n;
+								skipSpace();
+                                if (isNextChar(','))
+                                {
+                                    if (getMultiDigit(n))
+                                    {
+                                        if (n >= 0 && n < 64)
+                                        {
+                                            data.push_back(FDS_MOD_ENV);
+                                            data.push_back(n | d << 6);
+                                        }
+                                        else
+                                        {
+                                            std::cerr << "Line " << linenum << " : FDS envelope must be 0 to 63" << std::endl;
+                                            exit(1);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        std::cerr << "Line " << linenum << " : FDS envelope value is not specified." << std::endl;
+                                        exit(1);
+                                    }
+                                }
+                                else
+                                {
+                                    std::cerr << "Line " << linenum << " : FDS envelope value is not specified." << std::endl;
+                                    exit(1);
+                                }
+                            }
+                            else
+                            {
+                                std::cerr << "Line " << linenum << " : FDS envelope direction must be 0 or 1" << std::endl;
+								exit(1);
+                            }
+                        }
+                        else
+                        {
+                            std::cerr << "Line " << linenum << " : FDS envelope direction is not specified." << std::endl;
+                            exit(1);
+                        }
+                    }
+                    else if (isNextChar('g'))   //FDSモジュレーションゲイン指定
+                    {
+                        skipSpace();
+                        if (getMultiDigit(n))
+                        {
+                            if (n >= 0 && n < 64)
+                            {
+                                data.push_back(FDS_MOD_ENV);
+                                data.push_back(n | 0x80);
+                            }
+                            else
+                            {
+                                std::cerr << "Line " << linenum << " : FDS mod gain must be 0 to 63" << std::endl;
+                                exit(1);
+                            }
+                        }
+                        else
+                        {
+                            std::cerr << "Line " << linenum << " : FDS mod gain is not specified." << std::endl;
+                            exit(1);
+                        }
+                    }
+                    else if (isNextChar('f'))   //FDSモジュレーション周波数指定
+                    {
+                        skipSpace();
+                        if (getMultiDigit(n))
+                        {
+                            if (n >= 0 && n < 4096)
+                            {
+                                data.push_back(FDS_MOD_FREQ);
+                                data.push_back(n & 0xff);
+                                data.push_back(n >> 4);
+                            }
+                            else if (n < 0)
+                            {
+								data.push_back(FDS_MOD_FREQ);
+								data.push_back(0x00);
+                                data.push_back(0x80);
+                            }
+                            else
+                            {
+                                std::cerr << "Line " << linenum << " : FDS mod freq must be 4095 or less" << std::endl;
+                                exit(1);
+                            }
+                        }
+                        else
+                        {
+                            std::cerr << "Line " << linenum << " : FDS mod freq is not specified." << std::endl;
+                            exit(1);
+                        }
+                    }
+                    else
+                    {
+                        std::cerr << "Line " << linenum << " : Invalid FDS command." << std::endl;
+                        exit(1);
+					}
+                }
+            }
             else if (getc(c))
             {
                 if (c == 'p' || c == 'P')       //指定した曲番号のデータを再生
@@ -1618,7 +2066,7 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         }
                     }
                 }
-                if (c == 'm' || c == 'M')       //ノートマップ定義
+                else if (c == 'm' || c == 'M')       //ノートマップ定義
                 {
                     if (isTrack || trheadsize == 0) //曲中かサブルーチン中にあったら指定
                     {
@@ -1853,6 +2301,12 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         if (getMultiDigit(n))
                         {
                             tr.device = n;
+
+                            if (tr.device == DEV_FDS)
+                            {
+                                data.push_back(HW_ENV);
+								data.push_back(0x80); //FDSのハードウェアエンベロープ無効化
+                            }
                         }
                         else
                         {
@@ -2100,6 +2554,25 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                         }
                     }
                 }
+                else if (tr.device == DEV_FDS)
+                {
+                    int rate;
+                    skipSpace();
+                    if (isNextChar('*'))
+                    {
+                        data.push_back(HW_ENV);
+                        data.push_back(0x80);
+                        res = true;
+                    }
+                    else if (getMultiDigit(n))
+                    {
+                        rate = n;
+                        unsigned char v = (unsigned char)(rate & 0x3f);
+                        data.push_back(HW_ENV);
+                        data.push_back(v);
+                        res = true;
+                    }
+                }
                 else
                 {
                     int rate, loop;
@@ -2158,7 +2631,6 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     data.push_back(TRACK_END);    //終了コード
                     tr.data = data;
                     tracks.push_back(tr);
-                    data.clear();
                 }
 
                 std::sort(tracks.begin(), tracks.end());
@@ -2167,7 +2639,8 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                 //トラック数→1トラックのアドレス→1トラックのトラック番号→1トラックの音源番号→2トラックのアドレス→2トラックのトラック番号…
                 //デフォ音長の順
                 int pos = totalpos + trheadsize;
-                std::vector<unsigned char> trhead;
+                trhead.clear();
+				trbody.clear();
 
                 for (const auto& t : tracks)
                 {
@@ -2178,16 +2651,14 @@ void MMLReader::readBrackets(int startpos, int trheadsize, std::vector<unsigned 
                     pos += t.data.size();
                 }
 
-                trhead.push_back(0xff);             //トラックヘッダ終端
-                trhead.push_back(lengthtbl[3]);     //デフォルトのデフォルト音長（4分音符）
-
-                //全部準備ができたら戻り値にコピーして抜ける
-                std::copy(trhead.begin(), trhead.end(), std::back_inserter(data));
-
                 for (const auto& t : tracks)
                 {
-                    std::copy(t.data.begin(), t.data.end(), std::back_inserter(data));
+                    std::copy(t.data.begin(), t.data.end(), std::back_inserter(trbody));
                 }
+            }
+            else //トラックヘッダがない＝サブルーチンの場合
+            {
+                std::copy(data.begin(), data.end(), std::back_inserter(trbody));
             }
             return; //1曲ずつ読むのでここでreturnする
         default:

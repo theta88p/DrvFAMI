@@ -266,6 +266,7 @@ void FileWriter::createNsf()
     }
     else if (extdevice & ExtDev::FDS)
     {
+        drv += L"bin\\drv_fds.bin";
     }
     else if (extdevice & ExtDev::MMC5)
     {

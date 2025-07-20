@@ -93,9 +93,22 @@ SpdFreq:		.res	1	;速度カウンタに加算する値
 ProcTr:			.res	1	;処理中のトラック
 SeqAddr_L:		.res	1	;シーケンス情報のアドレスL
 SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
+
 .ifdef SS5B
 SS5BTone:		.res	3
 SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効なら0
+.endif
+
+.ifdef FDS
+FdsWavAddr_L:	.res	1
+FdsWavAddr_H:	.res	1
+FdsPrevWav:		.res	1	;前回書き込んだ音色番号
+FdsModAddr_L:	.res	1
+FdsModAddr_H:	.res	1
+FdsPrevMod:		.res	1
+FdsModTone:		.res	1	;モジュレータの音色番号
+FdsModFreq_L:	.res	1	;モジュレータの周波数L
+FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フラグ
 .endif
 
 ;00～6b	:o0c～o8b	音長デフォ
@@ -225,6 +238,10 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda #%00111000
 		sta $e000
 .endif
+.ifdef FDS
+		lda #%00000010
+		sta $4023
+.endif
 		lda #0
 		sta SpdCtr
 		sta ProcTr
@@ -349,7 +366,32 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		inx
 		cpx #MAX_TRACK
 		bcc @L
-
+.ifdef FDS
+		iny
+		clc
+		lda (Work), y
+		adc SeqAddr_L	;相対アドレスを絶対アドレスに直す
+		sta FdsWavAddr_L
+		iny
+		lda (Work), y
+		adc SeqAddr_H
+		sta FdsWavAddr_H
+		lda #$ff
+		sta FdsPrevWav	;0初期化すると音色番号0が読み込まれないため
+						;以下モジュレータも同様に処理
+		iny
+		clc
+		lda (Work), y
+		adc SeqAddr_L
+		sta FdsModAddr_L
+		iny
+		lda (Work), y
+		adc SeqAddr_H
+		sta FdsModAddr_H
+		lda #$ff
+		sta FdsModTone	;モジュレータ波形を指定しない場合無効
+		sta FdsPrevMod
+.endif
 		rts
 .endproc
 
@@ -1065,7 +1107,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		rts
 	lfa:
 		cmp #$fa	;サブルーチン
-		bne lend
+		bne lfb
 		lda #3
 		jsr addptr
 		ldy #1
@@ -1092,6 +1134,38 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		adc SeqAddr_H
 		sta Ptr_H, x
 		rts
+	lfb:
+.ifdef FDS
+		cmp #$fb	;FDSモジュレータ周波数
+		bne lfc
+		ldy #1
+		lda (Work), y
+		sta FdsModFreq_L
+		ldy #2
+		lda (Work), y
+		sta FdsModFreq_H
+		lda #3
+		jsr addptr
+		rts
+	lfc:
+		cmp #$fc	;FDSモジュレータ番号
+		bne lfd
+		ldy #1
+		lda (Work), y
+		sta FdsModTone
+		lda #2
+		jsr addptr
+		rts
+	lfd:
+		cmp #$fd	;FDSモジュレータエンベロープ
+		bne lend
+		ldy #1
+		lda (Work), y
+		sta $4084
+		lda #2
+		jsr addptr
+		rts
+.endif
 	lend:
 		rts
 .endproc
@@ -1249,6 +1323,8 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		beq saw
 		cmp #DEV_SS5B_SQR1
 		bcs ss5b
+		cmp #DEV_FDS
+		beq fds
 		lda Freq_Tbl, y
 		sta Work
 		lda Freq_Tbl + 1, y
@@ -1270,6 +1346,30 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda Freq_5B + 1, y
 		sta Work + 1
 		jmp calc
+.endif
+	fds:
+.ifdef FDS
+		lda Freq_FDS, y
+		sta Work
+		lda Freq_FDS + 1, y
+		sta Work + 1
+		lda Octave, x	;オクターブから周波数を計算する(FDSは周波数と比例なので6オクターブから)
+		cmp #6
+		bcc @N
+		lda #6
+		sta Octave, x
+		jmp end
+	@N:
+		lda #6
+		sec
+		sbc Octave, x
+		tay
+	@L:
+		beq end
+		lsr Work + 1
+		ror Work
+		dey
+		jmp @L
 .endif
 	calc:
 		ldy Octave, x	;オクターブから周波数を計算する
@@ -2006,9 +2106,15 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		jmp write_ss5b
 	ss5b_2:
 		cmp #DEV_SS5B_SQR3
-		bne end
+		bne fds
 		ldy #2
 		jmp write_ss5b
+.endif
+	fds:
+.ifdef FDS
+		cmp #DEV_FDS
+		bne end
+		jmp write_fds
 .endif
 	end:
 		jmp writereg_end
@@ -2073,8 +2179,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 	r4000:
 		sta $4000, y
 		lda Volume, x		;音量が0ならこれ以降は処理しない
-		bne hws
-		jmp end
+		beq end
 	hws:
 		ldy Work + 2
 		lda HSwpReg, x
@@ -2095,8 +2200,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		lda Freq_H, x
 		ldy Device, x
 		cmp PrevFreq_H, y
-		bne r4003
-		jmp end
+		beq end
 	r4003:
 		ldy Work + 2
 		lda #%00001000
@@ -2135,8 +2239,7 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta (Work + 2), y
 	next:
 		lda Volume, x		;音量が0ならこれ以降は処理しない
-		bne r9001
-		jmp end
+		beq end
 	r9001:
 		lda #1
 		sta Work + 2
@@ -2234,6 +2337,148 @@ SS5BHWEnv:		.res	3	;ハードウェアエンベロープが有効なら1無効�
 		sta $e000
 	end:
 		jmp writereg_end
+.endproc
+.endif
+
+;FDS
+.ifdef FDS
+.proc write_fds
+		lda FdsPrevWav
+		cmp Tone, x
+		beq mod				;前回書き込んだ音色と同じならスキップ
+		lda #%10000000
+		sta $4089			;Wavetable書き込み許可
+		lda #64
+		sta Work + 2
+		ldy Tone, x
+		lda FdsWavAddr_H	;波形アドレス計算
+		sta Work + 1
+		lda FdsWavAddr_L
+		sta Work
+		jsr fds_addr
+		ldy #63				;波形書き込み
+	@W:
+		lda (Work), y
+		sta $4040, y
+		dey
+		bpl @W
+		lda #0
+		sta $4089			;Wavetable書き込み禁止
+	mod:
+		lda FdsPrevMod
+		cmp FdsModTone
+		beq vol				;前回書き込んだ音色と同じならスキップ
+		lda #%10000000
+		sta $4087			;Mod停止
+		lda #16
+		sta Work + 2
+		ldy FdsModTone
+		lda FdsModAddr_H	;波形アドレス計算
+		sta Work + 1
+		lda FdsModAddr_L
+		sta Work
+		jsr fds_addr
+		ldy #0				;波形書き込み
+	@W:
+		lda (Work), y		;モジュレーション波形は3bitデータが
+		and #%00001111		;下位4bit→上位4bitの順で格納されている
+		sta $4088
+		lda (Work), y
+		lsr
+		lsr
+		lsr
+		lsr
+		sta $4088
+		iny
+		cpy #16
+		bcc @W
+		lda #0
+		sta $4085			;カウンタリセット
+		sta $4087			;Mod有効
+	vol:
+		lda Tone, x			;音色番号を保存
+		sta FdsPrevWav
+		lda FdsModTone
+		sta FdsPrevMod
+		lda HEnvReg, x
+		and #%10000000		;ハードウェアエンベロープが有効なら以下を実行
+		bne softenv
+		lda Frags, x
+		and #FRAG_KEYOFF
+		bne hweoff
+		lda Frags, x
+		and #FRAG_KEYON
+		beq freq
+		lda Volume, x
+		ora #%10000000
+		sta $4080
+		lda HEnvReg, x
+		sta $4080
+		jmp freq
+	hweoff:
+		lda #%10000000
+		ora Volume, x
+		sta $4080
+		jmp r4083
+	softenv:
+		lda #%10000000
+		ora Volume, x
+		sta $4080
+		lda Volume, x		;音量が0ならこれ以降は処理しない
+		beq end
+	freq:
+		lda FdsModFreq_H
+		and #%10000000		;最上位bitにフラグが立っていたら同期
+		bne fsync
+		lda FdsModFreq_L	;周波数書き込み
+		sta $4086
+		lda FdsModFreq_H
+		sta $4087
+		lda Freq_L, x
+		sta $4082
+		lda Frags, x
+		and #FRAG_KEYON		;キーオンなら
+		bne r4083
+		lda Freq_H, x
+		ldy Device, x
+		cmp PrevFreq_H, y
+		beq end
+	r4083:
+		lda Freq_H, x
+		sta $4083			;ここに書き込むと波形がリセットされるので注意
+		jmp end
+	fsync:
+		lda Freq_L, x		;周波数書き込み
+		sta $4082
+		sta $4086
+		lda Frags, x
+		and #FRAG_KEYON		;キーオンなら
+		bne @N
+		lda Freq_H, x
+		ldy Device, x
+		cmp PrevFreq_H, y
+		beq end
+	@N:
+		lda Freq_H, x
+		sta $4083			;ここに書き込むと波形がリセットされるので注意
+		sta $4087
+	end:
+		jmp writereg_end
+.endproc
+
+;FDSの波形アドレス計算
+.proc fds_addr
+	@L:
+		dey
+		bmi @E
+		clc
+		adc Work + 2
+		bcc @L
+		inc Work + 1
+		jmp @L
+	@E:
+		sta Work
+		rts
 .endproc
 .endif
 
@@ -2340,4 +2585,20 @@ Freq_5B:
 	.word	$0fdf
 	.word	$0efc
 	.word	$0e24
+.endif
+
+.ifdef FDS
+Freq_FDS:
+	.word	$09a4
+	.word	$0a36
+	.word	$0ad1
+	.word	$0b74
+	.word	$0c22
+	.word	$0cda
+	.word	$0d9c
+	.word	$0e6b
+	.word	$0f45
+	.word	$102d
+	.word	$1122
+	.word	$1226
 .endif
