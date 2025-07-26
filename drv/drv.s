@@ -438,7 +438,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		bne cnt				;ゲートカウンタが1でなければカウント処理へ
 		lda Frags, x		;ゲートカウンタが1になったらキーオフ
 		ora #FRAG_KEYOFF
-		and #FRAG_KEYON_CLR	& FRAG_KEYON_DIS_CLR
+		and #FRAG_KEYON_CLR	& FRAG_KEYON_DIS_CLR & FRAG_IS_KEYON_CLR
 		sta Frags, x
 		jmp cnt				;キーオフしたら終了
 	seq:
@@ -488,12 +488,12 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		and #FRAG_KEYON_DIS
 		bne @N
 		lda Frags, x
-		ora #FRAG_KEYON					;キーオンフラグを立てる
+		ora #FRAG_KEYON			;キーオンフラグを立てる
+		ora #FRAG_IS_KEYON		;キーオン中判定フラグを立てる
 		sta Frags, x
 	@N:
-		;ロードフラグを降ろす
 		lda Frags, x
-		and #FRAG_LOAD_CLR
+		and #FRAG_LOAD_CLR		;ロードフラグを降ろす
 		sta Frags, x
 		lda EnvFrags, x
 		and #FRAG_ENV_DIS_CLR	;エンベロープ無効フラグを降ろす
@@ -507,9 +507,15 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		cmp #$6c	;休符
 		bne l6d
 		lda Frags, x
-		ora #FRAG_KEYOFF						;キーオフフラグを立てる
-		;ロードフラグを降ろす
-		and #FRAG_LOAD_CLR
+		and #FRAG_IS_KEYON		;キーオン中でなければキーオフはしない
+		beq	@N
+		lda Frags, x
+		ora #FRAG_KEYOFF		;キーオフフラグを立てる
+		sta Frags, x
+	@N:
+		lda Frags, x
+		and #FRAG_IS_KEYON_CLR	;キーオン中フラグを降ろす
+		and #FRAG_LOAD_CLR		;ロードフラグを降ろす
 		sta Frags, x
 		lda DefLen, x
 		sta Length, x
@@ -859,12 +865,12 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		and #FRAG_KEYON_DIS
 		bne @N
 		lda Frags, x
-		ora #FRAG_KEYON					;キーオンフラグを立てる
+		ora #FRAG_KEYON			;キーオンフラグを立てる
+		ora #FRAG_IS_KEYON		;キーオン中判定フラグを立てる
 		sta Frags, x
 	@N:
-		;ロードフラグを降ろす
 		lda Frags, x
-		and #FRAG_LOAD_CLR
+		and #FRAG_LOAD_CLR		;ロードフラグを降ろす
 		sta Frags, x
 		lda EnvFrags, x
 		and #FRAG_ENV_DIS_CLR	;エンベロープ無効フラグを降ろす
@@ -879,9 +885,15 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		cmp #$ec	;音長あり休符
 		bne led
 		lda Frags, x
-		ora #FRAG_KEYOFF						;キーオフフラグを立てる
-		;ロードフラグを降ろす
-		and #FRAG_LOAD_CLR
+		and #FRAG_IS_KEYON		;キーオン中でなければキーオフはしない
+		beq	@N
+		lda Frags, x
+		ora #FRAG_KEYOFF		;キーオフフラグを立てる
+		sta Frags, x
+	@N:
+		lda Frags, x
+		and #FRAG_IS_KEYON_CLR	;キーオン中フラグを降ろす
+		and #FRAG_LOAD_CLR		;ロードフラグを降ろす
 		sta Frags, x
 		ldy #1
 		lda (Work), y
