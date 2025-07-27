@@ -31,9 +31,6 @@ bgm_00:		.addr	BGM0
 		jsr _init
 
 	Loop:
-		lda sync
-		beq Loop
-		
 		jmp	Loop
 .endproc
 
@@ -47,6 +44,7 @@ bgm_00:		.addr	BGM0
 	lda	bgm_00
 	ldx	bgm_00 + 1
 	jsr	drv_sndreq
+	rts
 .endproc
 
 .proc	_play

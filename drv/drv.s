@@ -22,7 +22,7 @@ Frags:			.res	MAX_TRACK	;通常のフラグ
 EnvFrags:		.res	MAX_TRACK	;エンベロープのフラグ
 LenCtr:			.res	MAX_TRACK	;音長カウンタ
 GateCtr:		.res	MAX_TRACK	;ゲートカウンター
-Work:			.res	4
+Work:			.res	7
 
 ;-----------------------------------------------------------------------
 ; Non Zeropage works
@@ -158,29 +158,28 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 .proc drv_main
 		lda DrvFrags
 		and #DRV_IS_PROC
-		bne start
-		rts
-	start:
+		bne exit
 		lda DrvFrags
 		ora #DRV_IS_PROC
 		sta DrvFrags
 		ldx #LAST_TRACK
 		jsr pretrack	;トラック処理の前に毎フレームやる処理をここでやる
-		lda SpdCtr
-		clc
-		adc SpdFreq
-		php
-		sta SpdCtr
 		lda DrvFrags
 		and #DRV_SKIP_DIR
-		bne acc			;加速の場合
-		plp
-		bcs env		;SpdFreqを足していって桁上がりしたらスキップ
+		bne acc
+		lda SpdCtr		;減速の場合
+		clc
+		adc SpdFreq
+		sta SpdCtr
+		bcs env			;SpdFreqを足していって桁上がりしたらスキップ
 		ldx #LAST_TRACK
 		jsr track		;トラック処理
 		jmp env
-	acc:
-		plp
+	acc:				;加速の場合
+		lda SpdCtr
+		clc
+		adc SpdFreq
+		sta SpdCtr
 		bcc single		;桁上がりしたら二重処理
 		ldx #LAST_TRACK
 		jsr track		;トラック処理
@@ -194,14 +193,13 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	single:
 		ldx #LAST_TRACK
 		jsr track		;トラック処理
-	env:
+	env:				;エンベロープと書き込み処理は毎フレームやる
 		ldx #LAST_TRACK
-		jsr envelope	;エンベロープと書き込み処理は毎フレームやる
-	iend:
+		jsr envelope
 		lda DrvFrags
-		ora #DRV_IS_PROC
-		and #DRV_DOUBLE_CLR
+		and #DRV_DOUBLE_CLR & DRV_IS_PROC_CLR
 		sta DrvFrags
+	exit:
 		rts
 .endproc
 
@@ -245,12 +243,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #0
 		sta SpdCtr
 		sta ProcTr
-		lda #0
 		sta SpdFreq
 		sta SpdCtr
-		
-		lda DrvFrags
-		ora #DRV_IS_PROC
 		sta DrvFrags
 		rts
 .endproc
@@ -368,8 +362,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		bcc @L
 .ifdef FDS
 		iny
-		clc
 		lda (Work), y
+		clc
 		adc SeqAddr_L	;相対アドレスを絶対アドレスに直す
 		sta FdsWavAddr_L
 		iny
@@ -380,8 +374,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta FdsPrevWav	;0初期化すると音色番号0が読み込まれないため
 						;以下モジュレータも同様に処理
 		iny
-		clc
 		lda (Work), y
+		clc
 		adc SeqAddr_L
 		sta FdsModAddr_L
 		iny
@@ -406,10 +400,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		rts
 	frag:
 		lda Frags, x
-		;ロードフラグを立てる
-		ora #FRAG_LOAD
 		;キーオン・キーオフ・キーオン無効・書き込み無効フラグを降ろす
 		and #FRAG_KEYON_CLR & FRAG_KEYON_DIS_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
+		;ロードフラグを立てる
+		ora #FRAG_LOAD
 		sta Frags, x
 		dex
 		bpl start
@@ -422,12 +416,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	start:
 		lda Frags, x
 		and #FRAG_END
-		beq len			;終了フラグが立っていなければ処理へ
-		dex
-		bpl start		;xがマイナスになったら全トラック終了
-	end1:
-		rts
-	len:
+		bne next		;終了フラグが立っていなければ処理へ
 		stx ProcTr
 		lda LenCtr, x
 		cmp #1
@@ -437,8 +426,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		cmp #1
 		bne cnt				;ゲートカウンタが1でなければカウント処理へ
 		lda Frags, x		;ゲートカウンタが1になったらキーオフ
-		ora #FRAG_KEYOFF
 		and #FRAG_KEYON_CLR	& FRAG_KEYON_DIS_CLR & FRAG_IS_KEYON_CLR
+		ora #FRAG_KEYOFF
 		sta Frags, x
 		jmp cnt				;キーオフしたら終了
 	seq:
@@ -448,21 +437,17 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		bne seq
 		lda Frags, x
 		and #FRAG_END
-		beq note			;終了フラグが立っていなければ処理へ
-		dex
-		bpl start
-		rts
-	note:
+		bne next			;終了フラグが立っていなければ処理へ
 		jsr procnote
-		jmp end
+		jmp next
 	cnt:
 		lda LenCtr, x
-		beq end
+		beq next
 		dec LenCtr, x
 		lda GateCtr, x
-		beq end
+		beq next
 		dec GateCtr, x
-	end:
+	next:
 		dex
 		bpl start
 		rts
@@ -477,10 +462,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta Work
 		lda Ptr_H, x
 		sta Work + 1
-	l00:
+
 		ldy #0
 		lda (Work), y
-		
+
 		cmp #$6c	;音長なしノート
 		bcs l6c
 		sta NoteN, x
@@ -488,8 +473,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		and #FRAG_KEYON_DIS
 		bne @N
 		lda Frags, x
-		ora #FRAG_KEYON			;キーオンフラグを立てる
-		ora #FRAG_IS_KEYON		;キーオン中判定フラグを立てる
+		ora #FRAG_KEYON | FRAG_IS_KEYON	;キーオンフラグとキーオン中判定フラグを立てる
 		sta Frags, x
 	@N:
 		lda Frags, x
@@ -514,8 +498,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta Frags, x
 	@N:
 		lda Frags, x
-		and #FRAG_IS_KEYON_CLR	;キーオン中フラグを降ろす
-		and #FRAG_LOAD_CLR		;ロードフラグを降ろす
+		and #FRAG_IS_KEYON_CLR & FRAG_LOAD_CLR	;キーオン中フラグとロードフラグを降ろす
 		sta Frags, x
 		lda DefLen, x
 		sta Length, x
@@ -851,8 +834,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		rts
 	@E:
 		lda Frags, x
-		ora #FRAG_END					;エンドフラグを立てる
 		and #FRAG_LOAD_CLR				;ロードフラグを降ろす
+		ora #FRAG_END					;エンドフラグを立てる
 		sta Frags, x
 		rts
 	leb:
@@ -865,8 +848,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		and #FRAG_KEYON_DIS
 		bne @N
 		lda Frags, x
-		ora #FRAG_KEYON			;キーオンフラグを立てる
-		ora #FRAG_IS_KEYON		;キーオン中判定フラグを立てる
+		ora #FRAG_KEYON | FRAG_IS_KEYON	;キーオンフラグとキーオン中判定フラグを立てる
 		sta Frags, x
 	@N:
 		lda Frags, x
@@ -892,8 +874,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta Frags, x
 	@N:
 		lda Frags, x
-		and #FRAG_IS_KEYON_CLR	;キーオン中フラグを降ろす
-		and #FRAG_LOAD_CLR		;ロードフラグを降ろす
+		and #FRAG_IS_KEYON_CLR & FRAG_LOAD_CLR	;キーオン中フラグとロードフラグを降ろす
 		sta Frags, x
 		ldy #1
 		lda (Work), y
@@ -1219,7 +1200,14 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	@G2:
 		ldy Work
 		lda LenCtr, x
-		jsr ndiv8
+		jsr mult		;a * y / 8
+		lsr Work + 3
+		ror Work + 2
+		lsr Work + 3
+		ror Work + 2
+		lsr Work + 3
+		ror Work + 2
+		lda Work + 2
 		sta GateCtr, x
 	next:
 		lda Frags, x		;キーオフの場合これ以降は処理しない
@@ -1403,13 +1391,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	start:
 		lda Frags, x
 		and #FRAG_END
-		beq env			;終了フラグが立っていなければ処理へ
-		dex
-		bpl start		;xがマイナスになったら全トラック終了
-	end1:
-		ldx #LAST_TRACK
-		jmp interrupt		;割り込み処理に移行
-	env:
+		bne next		;終了フラグが立っていなければ処理へ
+
 		stx ProcTr
 		lda EnvFrags, x
 		and #FRAG_ENV_DIS	;エンベロープ無効フラグが立っていたら音量処理へ
@@ -1443,35 +1426,35 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda EnvFrags, x
 		and #FRAG_VENV
 		beq vol				;音量エンベロープ無効なら音量処理へ
-		jmp last			;そうでなければ次のトラックへ
+		jmp next			;そうでなければ次のトラックへ
 	vol:
 		lda Frags, x
 		and #FRAG_KEYON		;キーオンされていたら音量をトラック音量にする
 		bne trv
 		lda Frags, x
 		and #FRAG_KEYOFF	;キーオフされていたら無音に
-		beq last
+		beq next
 		lda #0
 		sta Volume, x
 		jmp sil
 	trv:
 		lda TrVolume, x
 		sta Volume, x
+		beq sil
 		lda Frags, x		;音量が0でなければ無音フラグを降ろす
 		and #FRAG_SIL_CLR
 		sta Frags, x
-		bne last
+		bne next
 	sil:
 		lda Frags, x		;音量が0なら無音フラグを立てる
 		ora #FRAG_SIL
 		sta Frags, x
-	last:
+	next:
 		dex
-		bmi end		;xがマイナスになったら全トラック終了
-		jmp envelope
-	end:
+		bpl start			;xがマイナスになったら全トラック終了
+
 		lda #$ff
-		sta Work + 2		;発音トラックがあるか判定する変数をリセット
+		sta Work		;発音トラックがあるか判定する変数をリセット
 		ldx #LAST_TRACK
 		jmp interrupt		;割り込み処理に移行
 .endproc
@@ -1564,9 +1547,9 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 ;音量エンベロープ
 .proc volenv
 		lda VEnvAddr_L, x
-		sta Work + 2
+		sta Work
 		lda VEnvAddr_H, x
-		sta Work + 3
+		sta Work + 1
 		lda Frags, x
 		and #FRAG_KEYOFF
 		bne keyoff
@@ -1586,10 +1569,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jmp other
 	keyoff:
 		ldy #1
-		lda (Work + 2), y
+		lda (Work), y
 		sta VEnvPos, x		;キーオフ位置に移動
 		ldy #0
-		lda (Work + 2), y
+		lda (Work), y
 		and #%10000000		;ヘッダ1個目に最上位ビットが立っていたらキーオフ無効
 		beq get
 	other:
@@ -1600,56 +1583,44 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		beq ret
 		lda VEnvPos, x
 		ldy #1
-		cmp (Work + 2), y
+		cmp (Work), y
 		bne get				;ヘッダ2番目（キーオフ位置）に達したら
 		ldy #0				;ヘッダ1番目（ループ位置）に戻る
-		lda (Work + 2), y
+		lda (Work), y
 		and #%01111111		;最上位ビットを消す
 		sta VEnvPos, x
 	get:
 		lda VEnvPos, x
 		asl a
 		tay
-		lda (Work + 2), y	;アドレスにあるデータを取得（音量）
+		lda (Work), y	;アドレスにあるデータを取得（音量）
 		sta Volume, x		;いったん保存
 		iny
-		lda (Work + 2), y	;アドレスにあるデータを取得（フレーム数）
+		lda (Work), y	;アドレスにあるデータを取得（フレーム数）
 		sta VEnvCtr, x		;カウンタに代入
 		beq @S				;カウンタが0ならエンベロープ位置を移動しない
 		inc VEnvPos, x		;エンベロープ位置移動
 	@S:
 		lda Volume, x
 		beq frag			;0ならこれ以降処理しない
-		sta Work
-		lda #0
-		sta Work + 1
 		ldy TrVolume, x		;トラックボリュームを掛ける
-		bne @N
+		bne @N				;0なら処理しない
 		sta Volume, x
 		jmp frag
 	@N:
-		iny
-	@L:
-		clc
-		adc Work
-		bcc @C
-		inc Work + 1
-	@C:
-		dey
-		bne @L
-		sta Work
-		lsr Work + 1		;16で割る
-		ror Work
-		lsr Work + 1
-		ror Work
-		lsr Work + 1
-		ror Work
-		lda Work
+		jsr mult			;a * y
+		lsr Work + 3		;16で割る
+		ror Work + 2
+		lsr Work + 3
+		ror Work + 2
+		lsr Work + 3
+		ror Work + 2
+		lda Work + 2
 		cmp #1				;3bit右シフトした時点で1の場合そのまま終了（四捨五入）
 		beq @E
-		lsr Work + 1
-		ror Work
-		lda Work
+		lsr Work + 3
+		ror Work + 2
+		lda Work + 2
 		beq frag			;0なら無音フラグを立てる
 	@E:
 		sta Volume, x
@@ -1672,9 +1643,9 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 ;音程エンベロープ
 .proc freqenv
 		lda FEnvAddr_L, x
-		sta Work + 2
+		sta Work
 		lda FEnvAddr_H, x
-		sta Work + 3
+		sta Work + 1
 		lda Frags, x
 		and #FRAG_KEYOFF
 		bne keyoff
@@ -1694,10 +1665,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jmp other
 	keyoff:
 		ldy #1
-		lda (Work + 2), y
+		lda (Work), y
 		sta FEnvPos, x		;キーオフ位置に移動
 		ldy #0
-		lda (Work + 2), y
+		lda (Work), y
 		and #%10000000		;ヘッダ1個目に最上位ビットが立っていたらキーオフ無効
 		beq get
 	other:
@@ -1708,17 +1679,17 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		beq ret
 		lda FEnvPos, x
 		ldy #1
-		cmp (Work + 2), y
+		cmp (Work), y
 		bne get				;ヘッダ2番目（キーオフ位置）に達したら
 		ldy #0				;ヘッダ1番目（ループ位置）に戻る
-		lda (Work + 2), y
+		lda (Work), y
 		and #%01111111		;最上位ビットを消す
 		sta FEnvPos, x
 	get:
 		lda FEnvPos, x
 		asl a
 		tay
-		lda (Work + 2), y	;アドレスにあるデータを取得
+		lda (Work), y	;アドレスにあるデータを取得
 		eor #$ff
 		clc
 		adc #1				;符号反転
@@ -1739,7 +1710,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta Freq_H, x
 	next:
 		iny
-		lda (Work + 2), y	;アドレスにあるデータを取得（フレーム数）
+		lda (Work), y	;アドレスにあるデータを取得（フレーム数）
 		sta FEnvCtr, x		;カウンタに代入
 		beq @S				;カウンタが0ならエンベロープ位置を移動しない
 		inc FEnvPos, x		;エンベロープ位置移動
@@ -1755,9 +1726,9 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 ;ノートエンベロープ
 .proc noteenv
 		lda NEnvAddr_L, x
-		sta Work + 2
+		sta Work
 		lda NEnvAddr_H, x
-		sta Work + 3
+		sta Work + 1
 		lda Frags, x
 		and #FRAG_KEYOFF
 		bne keyoff
@@ -1777,10 +1748,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jmp other
 	keyoff:
 		ldy #1
-		lda (Work + 2), y
+		lda (Work), y
 		sta NEnvPos, x		;キーオフ位置に移動
 		ldy #0
-		lda (Work + 2), y
+		lda (Work), y
 		and #%10000000		;ヘッダ1個目に最上位ビットが立っていたらキーオフ無効
 		beq get
 	other:
@@ -1791,10 +1762,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		beq ret
 		lda NEnvPos, x
 		ldy #1
-		cmp (Work + 2), y
+		cmp (Work), y
 		bne get				;ヘッダ2番目（キーオフ位置）に達したら
 		ldy #0				;ヘッダ1番目（ループ位置）に戻る
-		lda (Work + 2), y
+		lda (Work), y
 		and #%01111111		;最上位ビットを消す
 		sta NEnvPos, x
 	get:
@@ -1821,7 +1792,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 .endif
 		pla
 		tay
-		lda (Work + 2), y	;アドレスにあるデータを取得
+		lda (Work), y	;アドレスにあるデータを取得
 		clc
 		adc RefNoteN, x		;ノートナンバーに加算
 		sta NoteN, x
@@ -1839,7 +1810,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	@N:
 		pla
 		tay
-		lda (Work + 2), y	;アドレスにあるデータを取得
+		lda (Work), y	;アドレスにあるデータを取得
 		eor #$ff			;反転して加算
 		clc
 		adc #1
@@ -1848,7 +1819,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta NoteN, x
 	last:
 		iny
-		lda (Work + 2), y	;アドレスにあるデータを取得（フレーム数）
+		lda (Work), y	;アドレスにあるデータを取得（フレーム数）
 		sta NEnvCtr, x		;カウンタに代入
 		beq @S				;カウンタが0ならエンベロープ位置を移動しない
 		inc NEnvPos, x		;エンベロープ位置移動
@@ -1864,9 +1835,9 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 ;音色エンベロープ
 .proc toneenv
 		lda TEnvAddr_L, x
-		sta Work + 2
+		sta Work
 		lda TEnvAddr_H, x
-		sta Work + 3
+		sta Work + 1
 		lda Frags, x
 		and #FRAG_KEYOFF
 		bne keyoff
@@ -1886,10 +1857,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jmp other
 	keyoff:
 		ldy #1
-		lda (Work + 2), y
+		lda (Work), y
 		sta TEnvPos, x		;キーオフ位置に移動
 		ldy #0
-		lda (Work + 2), y
+		lda (Work), y
 		and #%10000000		;ヘッダ1個目に最上位ビットが立っていたらキーオフ無効
 		beq get
 	other:
@@ -1900,21 +1871,21 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		beq ret
 		lda TEnvPos, x
 		ldy #1
-		cmp (Work + 2), y
+		cmp (Work), y
 		bne get				;ヘッダ2番目（キーオフ位置）に達したら
 		ldy #0				;ヘッダ1番目（ループ位置）に戻る
-		lda (Work + 2), y
+		lda (Work), y
 		and #%01111111		;最上位ビットを消す
 		sta TEnvPos, x
 	get:
 		lda TEnvPos, x
 		asl a
 		tay
-		lda (Work + 2), y		;アドレスにあるデータを取得
+		lda (Work), y		;アドレスにあるデータを取得
 		clc
 		sta Tone, x			;代入
 		iny
-		lda (Work + 2), y		;アドレスにあるデータを取得（フレーム数）
+		lda (Work), y		;アドレスにあるデータを取得（フレーム数）
 		sta TEnvCtr, x		;カウンタに代入
 		beq @S				;カウンタが0ならエンベロープ位置を移動しない
 		inc TEnvPos, x		;エンベロープ位置移動
@@ -1952,7 +1923,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		inx
 		cmp Device, x				;後のトラックと音源が違う場合なにもしない
 		bne iend0
-		lda Work + 2
+		lda Work
 		and #FRAG_END | FRAG_SIL	;発音しているトラックがない場合なにもしない
 		bne iend
 		dex
@@ -1962,13 +1933,13 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jmp iend2
 	iend0:
 		lda #$ff
-		sta Work + 2				;音源が変わったらリセット
+		sta Work				;音源が変わったらリセット
 	iend:
 		ldx ProcTr					;トラック番号を元に戻して復帰
 	iend2:
 		lda Frags, x
-		and Work + 2
-		sta Work + 2
+		and Work
+		sta Work
 		dex
 		bpl start
 	end:
@@ -2158,16 +2129,17 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 
 
 .proc writesqr
-		sty Work + 2		;一旦yを保存
+		sty Work + 1		;一旦yを保存
 		lda Tone, x
 		clc
-		ror a
-		ror a
-		ror a
+		ror
+		ror
+		ror
 		sta Work
 		lda HEnvReg, x
-		and #%00010000		;ハードウェアエンベロープが有効なら以下を実行
+		and #%00010000		;ハードウェアエンベロープが有効かどうか
 		bne softenv
+		;ハードウェアエンベロープ処理
 		lda Frags, x
 		and #FRAG_KEYOFF
 		bne hweoff
@@ -2193,7 +2165,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda Volume, x		;音量が0ならこれ以降は処理しない
 		beq end
 	hws:
-		ldy Work + 2
+		ldy Work + 1
 		lda HSwpReg, x
 		and #%10000000		;ハードウェアスイープ有効なら以下を実行
 		beq r4002
@@ -2204,7 +2176,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda HSwpReg, x
 		sta $4001, y
 		lda Freq_L, x
-		ldy Work + 2
+		ldy Work + 1
 		sta $4002, y
 		lda Frags, x
 		and #FRAG_KEYON		;キーオンなら
@@ -2214,7 +2186,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		cmp PrevFreq_H, y
 		beq end
 	r4003:
-		ldy Work + 2
+		ldy Work + 1
 		lda #%00001000
 		ora Freq_H, x
 		sta $4003, y		;ここに書き込むと波形がリセットされるので注意
@@ -2229,46 +2201,45 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 ;VRC6
 .ifdef VRC6
 .proc write_vrc6
-		sty Work + 3		;yにレジスタの上位アドレスが入ってくるので保存
+		sty Work + 1		;yにレジスタの上位アドレスが入ってくるので保存
 		lda #0
-		sta Work + 2
+		sta Work
 		cpy #$b0			;sawトラックは別処理
 		beq saw
 	r9000:
 		ldy #0
 		lda Tone, x
-		clc
-		asl a
-		asl a
-		asl a
-		asl a
+		asl
+		asl
+		asl
+		asl
 		ora Volume, x
-		sta (Work + 2), y
+		sta (Work), y
 		jmp next
 	saw:
 		ldy #0
 		lda Volume, x
-		sta (Work + 2), y
+		sta (Work), y
 	next:
 		lda Volume, x		;音量が0ならこれ以降は処理しない
 		beq end
 	r9001:
 		lda #1
-		sta Work + 2
+		sta Work
 		lda Freq_L, x
-		sta (Work + 2), y
+		sta (Work), y
 	r9002:
 		lda #2
-		sta Work + 2
+		sta Work
 		lda Frags, x
 		and #FRAG_KEYON		;キーオンなら
 		beq @N
 		lda #0				;いったん0書き込み
-		sta (Work + 2), y
+		sta (Work), y
 	@N:
 		lda #%10000000
 		ora Freq_H, x
-		sta (Work + 2), y
+		sta (Work), y
 	end:
 		jmp writereg_end
 .endproc
@@ -2277,12 +2248,12 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 ;MMC5
 .ifdef MMC5
 .proc write_mmc5
-		sty Work + 2		;一旦yを保存
+		sty Work		;一旦yを保存
 		lda Tone, x
 		clc
-		ror a
-		ror a
-		ror a
+		ror
+		ror
+		ror
 		ora #%00110000
 		ora Volume, x
 	r5000:
@@ -2299,7 +2270,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda Freq_L, x
 		cmp PrevFreq_L, y
 		beq end
-		ldy Work + 2
+		ldy Work
 		sta $5002, y
 		lda Freq_H, x
 		ldy Device, x
@@ -2308,7 +2279,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jmp end
 	r5003:
 		lda Freq_L, x
-		ldy Work + 2
+		ldy Work
 		sta $5002, y
 		lda #%00001000
 		ora Freq_H, x
@@ -2478,6 +2449,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jmp writereg_end
 .endproc
 
+
 ;FDSの波形アドレス計算
 .proc fds_addr
 	@L:
@@ -2493,6 +2465,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		rts
 .endproc
 .endif
+
 
 ;ポインタをa個進める
 .proc addptr
@@ -2525,29 +2498,31 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 .endproc
 
 
-;n/8 aに割る数、yにnを入れて渡す
-.proc ndiv8
-		sta Work + 2
+;a * y
+.proc mult
+		sty Work + 4
+		sta Work + 5
 		lda #0
-		sta Work + 3
-		lda Work + 2
-	@L:
-		dey
-		beq @E
-		clc
-		adc Work + 2
-		bcc @L
-		inc Work + 3
-		jmp @L
-	@E:
+		sta Work + 6
 		sta Work + 2
-		lsr Work + 3
-		ror Work + 2
-		lsr Work + 3
-		ror Work + 2
-		lsr Work + 3
-		ror Work + 2
+		sta Work + 3
+		ldy #8
+	loop:
+		lsr Work + 4
+		bcc next
 		lda Work + 2
+		clc
+		adc Work + 5
+		sta Work + 2
+		lda Work + 3
+		adc Work + 6
+		sta Work + 3
+	next:
+		asl Work + 5
+		rol Work + 6
+		dey
+		bne loop
+	end:
 		rts
 .endproc
 
