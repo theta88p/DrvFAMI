@@ -119,36 +119,39 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 ;70	:qx		ゲートタイム（音長-nの方式。他と排他）
 ;70	:ux		ゲートタイム（音長nの方式。他と排他）
 ;70	:Qx		ゲートタイム（音長n/8の方式。他と排他）
-;73	:kx		キーシフト相対指定
-;74	:Kx		キーシフト絶対指定
-;75	:&		次の音がタイ・スラーになる
-;76	:@x		音色指定
-;77	:tx		フレームスキップ値。コンパイラでテンポから計算
-;78 :@p		指定した曲番号のデータを再生
-;79	:@vx	音量エンベロープ指定（外部定義）
-;7a :@v*	音量エンベロープ停止
-;7b	:@fx	音程エンベロープ指定（外部定義）
-;7c :@f*	音程エンベロープ停止
-;7d	:@nx	ノートエンベロープ指定（外部定義）
-;7e :@n*	ノートエンベロープ停止
+;71	:kx		キーシフト相対指定
+;72	:Kx		キーシフト絶対指定
+;73	:&		次の音がタイ・スラーになる
+;74	:@x		音色指定
+;75	:tx		フレームスキップ値。コンパイラでテンポから計算
+;76 :@p		指定した曲番号のデータを再生
+;77	:@vx	音量エンベロープ指定（外部定義）
+;78 :@v*	音量エンベロープ停止
+;79	:@fx	音程エンベロープ指定（外部定義）
+;7a :@f*	音程エンベロープ停止
+;7b	:@nx	ノートエンベロープ指定（外部定義）
+;7c :@n*	ノートエンベロープ停止
+;7d	:@tx	音色エンベロープ指定（外部定義）
+;7e	:@t*	音色エンベロープ停止
 ;7f	:		トラック終了
 ;80～eb	:o0c～o8b	音長指定
 ;ec	:r		休符（音長指定）
 ;ed :L		無限ループ
 ;ee	:lx		デフォ音長
-;ef	:vx		ボリューム絶対指定（0～15）
-;f0	:v+-x	ボリューム相対指定（-15～15）
-;f1	:@tx	音色エンベロープ指定（外部定義）
-;f2	:@t*	音色エンベロープ停止
-;f3	:@dx	デチューン
-;f4	:hsx		ハードウェアスイープ
-;f5	:hex		ハードウェアエンベロープ
-;f6	:sx		ソフトウェアスイープ
-;f7	:s*		ソフトウェアスイープ無効
-;f8	:r-		エンベロープ無効
-;f9	:w		メモリ書き込み
-;fa	:\x	サブルーチン
+;ef	:v+-x	ボリューム相対指定（-15～15）
+;f0	:vx		ボリューム絶対指定（0～15）
+;f1	:@dx	デチューン
+;f2	:hsx	ハードウェアスイープ
+;f3	:hex	ハードウェアエンベロープ
+;f4	:sx		ソフトウェアスイープ
+;f5	:s*		ソフトウェアスイープ無効
+;f6	:r-		エンベロープ無効
+;f7	:w		メモリ書き込み
+;f8	:\x		サブルーチン
 
+;f9 :@fdsf	FDSモジュレーション周波数
+;fa	:@fdsm	FDSモジュレータ番号
+;fb	:@fdse	FDSモジュレーションエンベロープ
 
 ; ------------------------------------------------------------------------
 ; main
@@ -462,8 +465,48 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		ldy #0
 		lda (Work), y
 
-		cmp #$6c	;音長なしノート
-		bcs l6c
+		cmp #$6c
+		bcc def_note
+		cmp #$80
+		bcc lower_cmd
+		cmp #$ec
+		bcc len_note
+		cmp #$fc
+		bcc upper_cmd
+		
+	unknown_cmd:
+		; 未知のコマンドは無視
+		lda #1
+		jsr addptr
+		rts
+		
+	lower_cmd:
+		sec
+		sbc #$6c
+		cmp #lower_table_end - lower_table
+		bcs unknown_cmd
+		asl						; *2 for word table
+		tay
+		lda lower_table + 1, y
+		pha
+		lda lower_table, y
+		pha
+		rts						; ジャンプ実行
+		
+	upper_cmd:
+		sec
+		sbc #$ec
+		cmp #upper_table_end - upper_table
+		bcs unknown_cmd
+		asl						; *2 for word table
+		tay
+		lda upper_table + 1, y
+		pha
+		lda upper_table, y
+		pha
+		rts						; ジャンプ実行
+		
+	def_note:
 		sta NoteN, x
 		lda Frags, x
 		and #FRAG_KEYON_DIS
@@ -483,9 +526,32 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #1
 		jsr addptr
 		rts
-	l6c:
-		cmp #$6c	;休符
-		bne l6d
+		
+	len_note:
+		sec
+		sbc #$80
+		sta NoteN, x
+		lda Frags, x
+		and #FRAG_KEYON_DIS
+		bne @N
+		lda Frags, x
+		ora #FRAG_KEYON | FRAG_IS_KEYON	;キーオンフラグとキーオン中判定フラグを立てる
+		sta Frags, x
+	@N:
+		lda Frags, x
+		and #FRAG_LOAD_CLR		;ロードフラグを降ろす
+		sta Frags, x
+		lda EnvFrags, x
+		and #FRAG_ENV_DIS_CLR	;エンベロープ無効フラグを降ろす
+		sta EnvFrags, x
+		ldy #1
+		lda (Work), y
+		sta Length, x
+		lda #2
+		jsr addptr
+		rts
+
+	def_rest:			;音長なし休符
 		lda Frags, x
 		and #FRAG_IS_KEYON		;キーオン中でなければキーオフはしない
 		beq	@N
@@ -501,9 +567,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #1
 		jsr addptr
 		rts
-	l6d:
-		cmp #$6d	;ループ開始
-		bne l6e
+		
+	loop_start:			;ループ開始
 		inc LoopDepth, x
 		jsr loopoffset
 		sty Work + 2
@@ -518,9 +583,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda Ptr_H, x
 		sta LoopAddr_H, y
 		rts
-	l6e:
-		cmp #$6e	;ループ終了
-		bne l6f
+		
+	loop_end:			;ループ終了
 		jsr loopoffset
 		lda LoopN, y		;yだと直接decできない
 		sec
@@ -555,9 +619,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		pla
 		sta LoopAddr_H, y
 		rts
-	l6f:
-		cmp #$6f	;ループ途中終了
-		bne l70
+		
+	loop_mid_end:			;ループ途中終了
 		jsr loopoffset
 		lda LoopN, y
 		cmp #2
@@ -574,18 +637,16 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #1
 		jsr addptr
 		rts
-	l70:
-		cmp #$70	;ゲート
-		bne l73
+		
+	gate:					;ゲート
 		ldy #1
 		lda (Work), y
 		sta Gate, x
 		lda #2
 		jsr addptr
 		rts
-	l73:
-		cmp #$73	;相対キーシフト(k)
-		bne l74
+		
+	rel_shift:				;相対キーシフト(k)
 		ldy #1
 		lda (Work), y
 		clc
@@ -594,27 +655,23 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #2
 		jsr addptr
 		rts
-	l74:
-		cmp #$74	;絶対キーシフト(K)
-		bne l75
+		
+	abs_shift:				;絶対キーシフト(K)
 		ldy #1
 		lda (Work), y
 		sta KeyShift, x
 		lda #2
 		jsr addptr
 		rts
-	l75:
-		cmp #$75	;タイ・スラー
-		bne l76
+		
+	tai_slur:				;タイ・スラー
 		lda Frags, x
 		ora #FRAG_KEYON_DIS				;キーオン無効フラグを立てる
 		sta Frags, x
 		lda #1
 		jsr addptr
 		rts
-	l76:
-		cmp #$76	;音色指定
-		bne l77
+	tone:					;音色指定
 		lda EnvFrags, x
 		and #FRAG_TENV_CLR	;音色エンベロープを解除
 		sta EnvFrags, x
@@ -665,9 +722,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #4
 		jsr addptr
 		rts
-	l77:
-		cmp #$77	;フレームスキップ加算値（テンポ）
-		bne l78
+		
+	tempo:					;フレームスキップ加算値（テンポ）
 		ldy #1
 		lda (Work), y
 		beq @dec
@@ -685,9 +741,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #3
 		jsr addptr
 		rts
-	l78:
-		cmp #$78	;指定した曲番号のデータを再生
-		bne l79
+		
+	play:					;指定した曲番号のデータを再生
 		ldy #1
 		lda (Work), y
 		tay
@@ -698,9 +753,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #2
 		jsr addptr
 		rts
-	l79:
-		cmp #$79			;音量エンベロープ。引数はアドレスL、アドレスH、ディレイ
-		bne l7a
+		
+	volume_env:				;音量エンベロープ。引数はアドレスL、アドレスH、ディレイ
 		lda EnvFrags, x
 		ora #FRAG_VENV		;フラグを立てる
 		sta EnvFrags, x
@@ -727,9 +781,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #4
 		jsr addptr
 		rts
-	l7a:
-		cmp #$7a			;音量エンベロープのクリア
-		bne l7b
+		
+	volume_env_clear:		;音量エンベロープのクリア
 		lda EnvFrags, x
 		and #FRAG_VENV_CLR	;フラグを降ろす
 		sta EnvFrags, x
@@ -738,9 +791,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #1
 		jsr addptr
 		rts
-	l7b:
-		cmp #$7b			;音程エンベロープ。引数はアドレスL、アドレスH、ディレイ
-		bne l7c
+		
+	freq_env:				;音程エンベロープ。引数はアドレスL、アドレスH、ディレイ
 		lda EnvFrags, x
 		ora #FRAG_FENV		;フラグを立てる
 		sta EnvFrags, x
@@ -767,18 +819,16 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #4
 		jsr addptr
 		rts
-	l7c:
-		cmp #$7c			;音程エンベロープのクリア
-		bne l7d
+		
+	freq_env_clear:			;音程エンベロープのクリア
 		lda EnvFrags, x
 		and #FRAG_FENV_CLR	;フラグを降ろす
 		sta EnvFrags, x
 		lda #1
 		jsr addptr
 		rts
-	l7d:
-		cmp #$7d			;ノートエンベロープ。引数はアドレスL、アドレスH、ディレイ
-		bne l7e
+		
+	note_env:				;ノートエンベロープ。引数はアドレスL、アドレスH、ディレイ
 		lda EnvFrags, x
 		ora #FRAG_NENV		;フラグを立てる
 		sta EnvFrags, x
@@ -805,124 +855,16 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #4
 		jsr addptr
 		rts
-	l7e:
-		cmp #$7e			;ノートエンベロープのクリア
-		bne l7f
+		
+	note_env_clear:			;ノートエンベロープのクリア
 		lda EnvFrags, x
 		and #FRAG_NENV_CLR	;フラグを降ろす
 		sta EnvFrags, x
 		lda #1
 		jsr addptr
 		rts
-	l7f:
-		cmp #$7f	;トラック終了
-		bne leb
-		clc
-		lda InfLoopAddr_L, x			;無限ループアドレスが設定されていればジャンプ
-		bne @N
-		lda InfLoopAddr_H, x
-		beq @E
-	@N:
-		lda InfLoopAddr_L, x
-		sta Ptr_L, x
-		lda InfLoopAddr_H, x
-		sta Ptr_H, x
-		rts
-	@E:
-		lda Frags, x
-		and #FRAG_LOAD_CLR				;ロードフラグを降ろす
-		ora #FRAG_END					;エンドフラグを立てる
-		sta Frags, x
-		rts
-	leb:
-		cmp #$ec	;音長ありノート
-		bcs lec
-		sec
-		sbc #$80
-		sta NoteN, x
-		lda Frags, x
-		and #FRAG_KEYON_DIS
-		bne @N
-		lda Frags, x
-		ora #FRAG_KEYON | FRAG_IS_KEYON	;キーオンフラグとキーオン中判定フラグを立てる
-		sta Frags, x
-	@N:
-		lda Frags, x
-		and #FRAG_LOAD_CLR		;ロードフラグを降ろす
-		sta Frags, x
-		lda EnvFrags, x
-		and #FRAG_ENV_DIS_CLR	;エンベロープ無効フラグを降ろす
-		sta EnvFrags, x
-		ldy #1
-		lda (Work), y
-		sta Length, x
-		lda #2
-		jsr addptr
-		rts
-	lec:
-		cmp #$ec	;音長あり休符
-		bne led
-		lda Frags, x
-		and #FRAG_IS_KEYON		;キーオン中でなければキーオフはしない
-		beq	@N
-		lda Frags, x
-		ora #FRAG_KEYOFF		;キーオフフラグを立てる
-		sta Frags, x
-	@N:
-		lda Frags, x
-		and #FRAG_IS_KEYON_CLR & FRAG_LOAD_CLR	;キーオン中フラグとロードフラグを降ろす
-		sta Frags, x
-		ldy #1
-		lda (Work), y
-		sta Length, x
-		lda #2
-		jsr addptr
-		rts
-	led:
-		cmp #$ed	;無限ループ開始
-		bne lee
-		lda #1
-		jsr addptr
-		lda Ptr_L, x
-		sta InfLoopAddr_L, x
-		lda Ptr_H, x
-		sta InfLoopAddr_H, x
-		rts
-	lee:
-		cmp #$ee	;デフォ音長
-		bne lef
-		ldy #1
-		lda (Work), y
-		sta DefLen, x
-		lda #2
-		jsr addptr
-		rts
-	lef:
-		cmp #$ef	;ボリューム絶対指定
-		bne lf0
-		ldy #1
-		lda (Work), y
-		sta TrVolume, x
-		lda #2
-		jsr addptr
-		rts
-	lf0:
-		cmp #$f0	;ボリューム相対指定
-		bne lf1
-		ldy #1
-		lda (Work), y
-		clc
-		adc TrVolume, x
-		bpl @P
-		lda #0
-	@P:
-		sta TrVolume, x
-		lda #2
-		jsr addptr
-		rts
-	lf1:
-		cmp #$f1			;音色エンベロープ。引数はアドレスL、アドレスH、ディレイ
-		bne lf2
+		
+	tone_env:				;音色エンベロープ。引数はアドレスL、アドレスH、ディレイ
 		lda EnvFrags, x
 		ora #FRAG_TENV		;フラグを立てる
 		sta EnvFrags, x
@@ -949,9 +891,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #4
 		jsr addptr
 		rts
-	lf2:
-		cmp #$f2			;音色エンベロープのクリア
-		bne lf3
+		
+	tone_env_clear:			;音色エンベロープのクリア
 		lda EnvFrags, x
 		and #FRAG_TENV_CLR	;フラグを降ろす
 		sta EnvFrags, x
@@ -960,27 +901,99 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #1
 		jsr addptr
 		rts
-	lf3:
-		cmp #$f3			;デチューン
-		bne lf4
+		
+	track_end:				;トラック終了
+		clc
+		lda InfLoopAddr_L, x			;無限ループアドレスが設定されていればジャンプ
+		bne @N
+		lda InfLoopAddr_H, x
+		beq @E
+	@N:
+		lda InfLoopAddr_L, x
+		sta Ptr_L, x
+		lda InfLoopAddr_H, x
+		sta Ptr_H, x
+		rts
+	@E:
+		lda Frags, x
+		and #FRAG_LOAD_CLR				;ロードフラグを降ろす
+		ora #FRAG_END					;エンドフラグを立てる
+		sta Frags, x
+		rts
+		
+	len_rest:				;音長あり休符
+		lda Frags, x
+		and #FRAG_IS_KEYON		;キーオン中でなければキーオフはしない
+		beq	@N
+		lda Frags, x
+		ora #FRAG_KEYOFF		;キーオフフラグを立てる
+		sta Frags, x
+	@N:
+		lda Frags, x
+		and #FRAG_IS_KEYON_CLR & FRAG_LOAD_CLR	;キーオン中フラグとロードフラグを降ろす
+		sta Frags, x
+		ldy #1
+		lda (Work), y
+		sta Length, x
+		lda #2
+		jsr addptr
+		rts
+		
+	inf_loop_def:			;無限ループ設定
+		lda #1
+		jsr addptr
+		lda Ptr_L, x
+		sta InfLoopAddr_L, x
+		lda Ptr_H, x
+		sta InfLoopAddr_H, x
+		rts
+		
+	def_len:				;デフォ音長
+		ldy #1
+		lda (Work), y
+		sta DefLen, x
+		lda #2
+		jsr addptr
+		rts
+		
+	rel_volume:				;ボリューム相対指定
+		ldy #1
+		lda (Work), y
+		clc
+		adc TrVolume, x
+		bpl @P
+		lda #0
+	@P:
+		sta TrVolume, x
+		lda #2
+		jsr addptr
+		rts
+		
+	abs_volume:				;ボリューム絶対指定
+		ldy #1
+		lda (Work), y
+		sta TrVolume, x
+		lda #2
+		jsr addptr
+		rts
+		
+	detune:					;デチューン
 		ldy #1
 		lda (Work), y
 		sta Detune, x
 		lda #2
 		jsr addptr
 		rts
-	lf4:
-		cmp #$f4			;ハードウェアスイープ
-		bne lf5
+		
+	hw_sweep:				;ハードウェアスイープ
 		ldy #1
 		lda (Work), y
 		sta HSwpReg, x
 		lda #2
 		jsr addptr
 		rts
-	lf5:
-		cmp #$f5			;ハードウェアエンベロープ
-		bne lf6
+		
+	hw_env:					;ハードウェアエンベロープ
 .ifdef SS5B
 		lda Device, x
 		cmp #DEV_SS5B_SQR3 + 1
@@ -1023,10 +1036,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #2
 		jsr addptr
 		rts
-	lf6:
-		cmp #$f6	;ソフトウェアスイープ
-		bne lf7				;引数は終了周波数（+-半音単位）、Delay、Speed。開始周波数はノートの方を変更する。
-		lda EnvFrags, x
+		
+	sw_sweep:				;ソフトウェアスイープ
+		lda EnvFrags, x		;引数は終了周波数（+-半音単位）、Delay、Speed。
+							;開始周波数はノートの方を変更する。
 		ora #FRAG_SSWP		;フラグを立てる
 		sta EnvFrags, x
 		ldy #1
@@ -1060,27 +1073,24 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #4
 		jsr addptr
 		rts
-	lf7:
-		cmp #$f7			;ソフトウェアスイープのクリア
-		bne lf8
+		
+	sw_sweep_clear:			;ソフトウェアスイープのクリア
 		lda EnvFrags, x
 		and #FRAG_SSWP_CLR	;フラグを降ろす
 		sta EnvFrags, x
 		lda #1
 		jsr addptr
 		rts
-	lf8:
-		cmp #$f8			;エンベロープ無効
-		bne lf9
+		
+	disable_env:			;エンベロープ無効
 		lda EnvFrags, x
 		ora #FRAG_ENV_DIS	;エンベロープ無効フラグを立てる
 		sta EnvFrags, x
 		lda #1
 		jsr addptr
 		rts
-	lf9:
-		cmp #$f9			;メモリ書き込み
-		bne lfa
+		
+	mem_write:				;メモリ書き込み
 		ldy #1
 		lda (Work), y
 		sta Work + 2
@@ -1094,9 +1104,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #4
 		jsr addptr
 		rts
-	lfa:
-		cmp #$fa	;サブルーチン
-		bne lfb
+		
+	subroutine:				;サブルーチン
 		lda #3
 		jsr addptr
 		ldy #1
@@ -1123,10 +1132,9 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		adc SeqAddr_H
 		sta Ptr_H, x
 		rts
-	lfb:
+		
 .ifdef FDS
-		cmp #$fb	;FDSモジュレータ周波数
-		bne lfc
+	fds_mod_freq:		;FDSモジュレータ周波数
 		ldy #1
 		lda (Work), y
 		sta FdsModFreq_L
@@ -1136,18 +1144,16 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #3
 		jsr addptr
 		rts
-	lfc:
-		cmp #$fc	;FDSモジュレータ番号
-		bne lfd
+		
+	fds_mod_tone:		;FDSモジュレータ番号
 		ldy #1
 		lda (Work), y
 		sta FdsModTone
 		lda #2
 		jsr addptr
 		rts
-	lfd:
-		cmp #$fd	;FDSモジュレータエンベロープ
-		bne lend
+		
+	fds_mod_env:		;FDSモジュレータエンベロープ
 		ldy #1
 		lda (Work), y
 		sta $4084
@@ -1155,8 +1161,52 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jsr addptr
 		rts
 .endif
-	lend:
-		rts
+		
+	lower_table:
+		.word def_rest - 1
+		.word loop_start - 1
+		.word loop_end - 1
+		.word loop_mid_end - 1
+		.word gate - 1
+		.word rel_shift - 1
+		.word abs_shift - 1
+		.word tai_slur - 1
+		.word tone - 1
+		.word tempo - 1
+		.word play - 1
+		.word volume_env - 1
+		.word volume_env_clear - 1
+		.word freq_env - 1
+		.word freq_env_clear - 1
+		.word note_env - 1
+		.word note_env_clear - 1
+		.word tone_env - 1
+		.word tone_env_clear - 1
+		.word track_end - 1
+	lower_table_end:
+	
+	upper_table:
+		.word len_rest - 1
+		.word inf_loop_def - 1
+		.word def_len - 1
+		.word rel_volume - 1
+		.word abs_volume - 1
+		.word detune - 1
+		.word hw_sweep - 1
+		.word hw_env - 1
+		.word sw_sweep - 1
+		.word sw_sweep_clear - 1
+		.word disable_env - 1
+		.word mem_write - 1
+		.word subroutine - 1
+.ifdef FDS
+		.word fds_mod_freq - 1
+		.word fds_mod_tone - 1
+		.word fds_mod_env - 1
+.endif
+	upper_table_end:
+	
+
 .endproc
 
 
