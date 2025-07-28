@@ -1605,9 +1605,13 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		beq frag			;0ならこれ以降処理しない
 		ldy TrVolume, x		;トラックボリュームを掛ける
 		bne @N				;0なら処理しない
+		tya
 		sta Volume, x
 		jmp frag
 	@N:
+		cpy #15				;15（最大）なら処理しない
+		beq @E
+		iny					;16で割る都合上1を足す
 		jsr mult			;a * y
 		lsr Work + 3		;16で割る
 		ror Work + 2
