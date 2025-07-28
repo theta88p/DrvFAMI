@@ -483,7 +483,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	lower_cmd:
 		sec
 		sbc #$6c
-		cmp #lower_table_end - lower_table
+		cmp #upper_table - lower_table
 		bcs unknown_cmd
 		asl						; *2 for word table
 		tay
@@ -671,6 +671,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #1
 		jsr addptr
 		rts
+		
 	tone:					;音色指定
 		lda EnvFrags, x
 		and #FRAG_TENV_CLR	;音色エンベロープを解除
@@ -1183,8 +1184,6 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		.word tone_env - 1
 		.word tone_env_clear - 1
 		.word track_end - 1
-	lower_table_end:
-	
 	upper_table:
 		.word len_rest - 1
 		.word inf_loop_def - 1
