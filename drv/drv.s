@@ -1268,28 +1268,28 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		rts
 	calcoct:
 		lda NoteN, x		;周波数計算
-		jsr calcfreq		;WorkとWork + 1に入って帰ってくる
+		jsr calcfreq		;Work + 2とWork + 3に入って帰ってくる
 	last:
 		lda Detune, x		;0でなければデチューン値を加算
 		beq end2
 		bmi neg
 		clc
-		adc Work
-		sta Work
+		adc Work + 2
+		sta Work + 2
 		bcc end2
-		inc Work + 1
+		inc Work + 3
 		jmp end2
 	neg:
 		clc
-		adc Work
-		sta Work
+		adc Work + 2
+		sta Work + 2
 		bcs end2
-		dec Work + 1
+		dec Work + 3
 	end2:
-		lda Work
+		lda Work + 2
 		sta Freq_L, x
 		sta RefFreq_L, x
-		lda Work + 1
+		lda Work + 3
 		sta Freq_H, x
 		sta RefFreq_H, x
 		rts
@@ -1326,33 +1326,33 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		cmp #DEV_FDS
 		beq fds
 		lda Freq_Tbl, y
-		sta Work
+		sta Work + 2
 		lda Freq_Tbl + 1, y
-		sta Work + 1
+		sta Work + 3
 		jmp calc
 	saw:
 .ifdef	VRC6
 		lda Freq_Saw, y
-		sta Work
+		sta Work + 2
 		lda Freq_Saw + 1, y
-		sta Work + 1
+		sta Work + 3
 		jmp calc
 .endif
 	ss5b:
 .ifdef SS5B
 		inc Octave, x	;5Bは-1オクターブから
 		lda Freq_5B, y
-		sta Work
+		sta Work + 2
 		lda Freq_5B + 1, y
-		sta Work + 1
+		sta Work + 3
 		jmp calc
 .endif
 	fds:
 .ifdef FDS
 		lda Freq_FDS, y
-		sta Work
+		sta Work + 2
 		lda Freq_FDS + 1, y
-		sta Work + 1
+		sta Work + 3
 		lda Octave, x	;オクターブから周波数を計算する(FDSは周波数と比例なので6オクターブから)
 		cmp #6
 		bcc @N
@@ -1366,8 +1366,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		tay
 	@L:
 		beq end
-		lsr Work + 1
-		ror Work
+		lsr Work + 3
+		ror Work + 2
 		dey
 		jmp @L
 .endif
@@ -1375,8 +1375,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		ldy Octave, x	;オクターブから周波数を計算する
 	@L:
 		beq end
-		lsr Work + 1
-		ror Work
+		lsr Work + 3
+		ror Work + 2
 		dey
 		jmp @L
 	end:
@@ -1801,10 +1801,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		adc RefNoteN, x		;ノートナンバーに加算
 		sta NoteN, x
 		jsr calcfreq		;周波数計算
-		lda Work
+		lda Work + 2
 		sta RefFreq_L, x
 		sta Freq_L, x
-		lda Work + 1
+		lda Work + 3
 		sta RefFreq_H, x
 		sta Freq_H, x
 		lda NEnvPos, x
