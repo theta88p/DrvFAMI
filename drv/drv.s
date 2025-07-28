@@ -266,7 +266,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #1
 		sta LenCtr, x
 		sta GateCtr, x
-		lda #FRAG_LOAD | FRAG_SIL
+		lda #FRAG_SIL
 		sta Frags, x
 		lda #FRAG_ENV_DIS
 		sta EnvFrags, x
@@ -334,14 +334,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jsr track_init	;トラック初期化
 		jmp next
 	nouse:
-		lda Frags, x	;使っているトラックならスルー
-		and #FRAG_KEYON | FRAG_KEYOFF | FRAG_LOAD
-		bne @N
 		lda #FRAG_END
 		sta Frags, x
 		lda #$ff
 		sta Device, x	;$ffを入れて処理しないようにしておく
-	@N:
 		inx
 		cpx #MAX_TRACK
 		bcc loop
