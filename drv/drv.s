@@ -1519,9 +1519,9 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		clc
 		adc SSwpEnd, x			;スイープ終了周波数を計算
 		jsr calcfreq
-		lda Work
+		lda Work + 2
 		sta SSwpEndFreq_L, x
-		lda Work + 1
+		lda Work + 3
 		sta SSwpEndFreq_H, x
 		lda SSwpDelay, x
 		clc						;カウンタにディレイ値を加算
@@ -2012,24 +2012,29 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	next:
 		dex
 		bpl start		;xがマイナスになったら全トラック終了
-	end1:
 		rts
 	exec:
 		stx ProcTr
 		lda Device, x
-	sqr0:
-		cmp #DEV_2A03_SQR1
-		bne sqr1
+		cmp #dev_table_end - dev_table
+		bcs next
+		asl						; *2 for word table
+		tay
+		lda dev_table + 1, y
+		pha
+		lda dev_table, y
+		pha
+		rts						; ジャンプ実行
+
+	int_sqr1:
 		ldy #0
 		jmp writesqr
-	sqr1:
-		cmp #DEV_2A03_SQR2
-		bne tri
+
+	int_sqr2:
 		ldy #4
 		jmp writesqr
-	tri:
-		cmp #DEV_2A03_TRI
-		bne noi
+
+	int_tri:
 		lda Freq_L, x
 		sta $400a
 		lda Freq_H, x
@@ -2038,49 +2043,51 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		ora Volume, x
 		sta $4008
 		jmp writereg_end
-	noi:
-		cmp #DEV_2A03_NOISE
-		bne pcm
+
+	int_noise:
 		lda HEnvReg, x
 		and #%00010000		;ハードウェアエンベロープが有効なら以下を実行
-		bne softenv
+		bne @softenv
 		lda Frags, x
 		and #FRAG_KEYOFF
-		bne softenv
+		bne @softenv
 		lda Frags, x
 		and #FRAG_KEYON
-		beq r400e
+		beq @r400e
 		lda #%00001000
 		sta $400f
 		lda HEnvReg, x
-		jmp r400c
-	softenv:
+		jmp @r400c
+	@softenv:
 		lda #%00001000
 		sta $400f
 		lda #%00110000
 		ora Volume, x
-	r400c:
+	@r400c:
 		sta $400c
 		lda Volume, x		;音量が0ならこれ以降は処理しない
-		bne r400e
-		jmp writereg_end
-	r400e:
+		beq @end
+	@r400e:
 		lda Tone, x
 		clc
 		ror a
 		ror a
 		ora NoteN, x
 		sta $400e
+	@end:
 		jmp writereg_end
-	pcm:
-		cmp #DEV_2A03_DPCM
-		bne vrc6_0
+
+	int_dpcm:
 		lda Frags, x
 		and #FRAG_KEYON | FRAG_KEYOFF	;キーオンもキーオフもたっていなければ終了
-		beq end
+		beq @end
 		lda Frags, x
 		and #FRAG_KEYOFF	;キーオフが立っていたら再生終了
-		bne stop
+		beq @play
+		lda #%00001111
+		sta $4015
+		jmp @end
+	@play:
 		lda NoteN, x
 		sta $4010
 		lda Volume, x
@@ -2091,65 +2098,96 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta $4015
 		lda #%00011111
 		sta $4015
+	@end:
 		jmp writereg_end
-	stop:
-		lda #%00001111
-		sta $4015
+
+	unknown:
 		jmp writereg_end
-	vrc6_0:
+
 .ifdef VRC6
-		cmp #DEV_VRC6_SQR1
-		bne vrc6_1
+	vrc6_sqr1:
 		ldy #$90
 		jmp write_vrc6
-	vrc6_1:
-		cmp #DEV_VRC6_SQR2
-		bne vrc6_2
+
+	vrc6_sqr2:
 		ldy #$a0
 		jmp write_vrc6
-	vrc6_2:
-		cmp #DEV_VRC6_SAW
-		bne mmc5_0
+
+	vrc6_saw:
 		ldy #$b0
 		jmp write_vrc6
 .endif
-	mmc5_0:
+
 .ifdef MMC5
-		cmp #DEV_MMC5_SQR1
-		bne mmc5_1
+	mmc5_sqr1:
 		ldy #0
 		jmp write_mmc5
-	mmc5_1:
-		cmp #DEV_MMC5_SQR2
-		bne ss5b_0
+
+	mmc5_sqr2:
 		ldy #4
 		jmp write_mmc5
 .endif
-	ss5b_0:
+
 .ifdef SS5B
-		cmp #DEV_SS5B_SQR1
-		bne ss5b_1
+	ss5b_sqr1:
 		ldy #0
 		jmp write_ss5b
-	ss5b_1:
-		cmp #DEV_SS5B_SQR2
-		bne ss5b_2
+
+	ss5b_sqr2:
 		ldy #1
 		jmp write_ss5b
-	ss5b_2:
-		cmp #DEV_SS5B_SQR3
-		bne fds
+
+	ss5b_sqr3:
 		ldy #2
 		jmp write_ss5b
 .endif
-	fds:
+
 .ifdef FDS
-		cmp #DEV_FDS
-		bne end
+	fds:
 		jmp write_fds
 .endif
-	end:
-		jmp writereg_end
+
+	dev_table:
+		.word int_sqr1 - 1
+		.word int_sqr2 - 1
+		.word int_tri - 1
+		.word int_noise - 1
+		.word int_dpcm - 1
+.ifdef VRC6
+		.word vrc6_sqr1 - 1
+		.word vrc6_sqr2 - 1
+		.word vrc6_saw - 1
+.else
+		.word unknown - 1
+		.word unknown - 1
+		.word unknown - 1
+.endif
+
+.ifdef MMC5
+		.word mmc5_sqr1 - 1
+		.word mmc5_sqr2 - 1
+.else
+		.word unknown - 1
+		.word unknown - 1
+.endif
+
+.ifdef SS5B
+		.word ss5b_sqr1 - 1
+		.word ss5b_sqr2 - 1
+		.word ss5b_sqr3 - 1
+.else
+		.word unknown - 1
+		.word unknown - 1
+		.word unknown - 1
+.endif
+
+.ifdef FDS
+		.word fds - 1
+.else
+		.word unknown - 1
+.endif
+	dev_table_end:
+
 .endproc
 
 
@@ -2547,7 +2585,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 .endproc
 
 
-;a * y
+;乗算（a * y）
 .proc mult
 		sty Work + 4
 		sta Work + 5
