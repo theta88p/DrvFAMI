@@ -93,6 +93,7 @@ SpdFreq:		.res	1	;速度カウンタに加算する値
 ProcTr:			.res	1	;処理中のトラック
 SeqAddr_L:		.res	1	;シーケンス情報のアドレスL
 SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
+PrevDev:		.res	1	;前回の音源（レジスタ書き込み用）
 
 .ifdef SS5B
 SS5BTone:		.res	3
@@ -249,6 +250,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta SpdFreq
 		sta SpdCtr
 		sta DrvFrags
+		lda #$ff
+		sta PrevDev
 		rts
 .endproc
 
@@ -399,8 +402,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		rts
 	frag:
 		lda Frags, x
-		;キーオン・キーオフ・キーオン無効・書き込み無効フラグを降ろす
-		and #FRAG_KEYON_CLR & FRAG_KEYON_DIS_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
+		;キーオン・キーオフ・キーオン無効フラグを降ろす
+		and #FRAG_KEYON_CLR & FRAG_KEYON_DIS_CLR & FRAG_KEYOFF_CLR
 		;ロードフラグを立てる
 		ora #FRAG_LOAD
 		sta Frags, x
@@ -1501,7 +1504,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda #$ff
 		sta Work		;発音トラックがあるか判定する変数をリセット
 		ldx #LAST_TRACK
-		jmp interrupt		;割り込み処理に移行
+		jmp writereg		;割り込み処理に移行
 .endproc
 
 
@@ -1948,66 +1951,20 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 
 
 ; ------------------------------------------------------------------------
-; 割り込み処理
-; ------------------------------------------------------------------------
-.proc interrupt
-	start:
-		stx ProcTr
-		lda Frags, x
-		and #FRAG_END | FRAG_SIL	;現在のトラックが無音の場合、後のトラックの発音処理をする
-		bne exec
-	@L:
-		lda Device, x
-		inx
-		cmp Device, x
-		bne iend0
-		lda Frags, x
-		ora #FRAG_WRITE_DIS			;無音でない場合は、後のトラックを書き込み無効に
-		sta Frags, x
-		jmp @L						;同じ音源の間繰り返す
-	exec:
-		cpx #LAST_TRACK
-		beq iend2					;最終トラックなら何もしない
-		lda Device, x
-		inx
-		cmp Device, x				;後のトラックと音源が違う場合なにもしない
-		bne iend0
-		lda Work
-		and #FRAG_END | FRAG_SIL	;発音しているトラックがない場合なにもしない
-		bne iend
-		dex
-		lda Frags, x
-		ora #FRAG_WRITE_DIS			;それ以外は現在のトラックをレジスタ書き込み無効にする
-		sta Frags, x
-		jmp iend2
-	iend0:
-		lda #$ff
-		sta Work				;音源が変わったらリセット
-	iend:
-		ldx ProcTr					;トラック番号を元に戻して復帰
-	iend2:
-		lda Frags, x
-		and Work
-		sta Work
-		dex
-		bpl start
-	end:
-		ldx #LAST_TRACK
-		jmp writereg				;全部終わったらレジスタ書き込みへ
-.endproc
-
-
-; ------------------------------------------------------------------------
 ; レジスタ書き込み
 ; ------------------------------------------------------------------------
 .proc writereg
 	start:
 		lda Device, x
 		cmp #$ff
-		beq next		;未使用トラックは処理しない
+		beq next					;未使用トラックは処理しない
+		cmp PrevDev					;前の音源と違う場合無条件で書き込む
+		bne exec
 		lda Frags, x
-		and #FRAG_WRITE_DIS
-		beq exec		;レジスタ書き込み無効フラグが立っていたら終了処理へ
+		and #FRAG_END | FRAG_SIL	;同じ場合、発音していれば書き込む
+		beq exec
+		lda Device, x
+		sta PrevDev
 		jmp writereg_end
 	next:
 		dex
@@ -2016,6 +1973,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	exec:
 		stx ProcTr
 		lda Device, x
+		sta PrevDev
 		cmp #dev_table_end - dev_table
 		bcs next
 		asl						; *2 for word table
@@ -2193,20 +2151,11 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 
 ;1トラック書き込み終了
 .proc writereg_end
-		lda Frags, x
-		and #FRAG_WRITE_DIS | FRAG_SIL	;書き込み無効か無音フラグが立っていた場合
-		bne frag
 		ldy Device, x		;周波数の保存
 		lda Freq_L, x
 		sta PrevFreq_L, y
 		lda Freq_H, x
 		sta PrevFreq_H, y
-	frag:
-		;lda Frags, x
-		;ora #FRAG_LOAD			;ロードフラグを立てる
-		;キーオン・キーオフ・書き込み無効フラグを降ろす
-		;and #FRAG_KEYON_CLR & FRAG_KEYOFF_CLR & FRAG_WRITE_DIS_CLR
-		;sta Frags, x
 		dex
 		bmi end
 		jmp writereg

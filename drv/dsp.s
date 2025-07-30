@@ -566,7 +566,7 @@ YPOS5 = $A7
 		jmp @M
 	@N:
 		lda Frags, x
-		and #FRAG_END | FRAG_WRITE_DIS
+		and #FRAG_END
 		beq true
 		inx
 	@M:
