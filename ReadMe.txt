@@ -1,4 +1,4 @@
-DrvFAMI - Famicom/NES Sound Driver & Compiler
+FamiDriverCLI - Famicom/NES Sound Driver & Compiler
 Copylight(c) 2024-2025 theta
 
 ・使い方

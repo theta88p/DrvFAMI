@@ -4,7 +4,7 @@
 
 void outputUsage()
 {
-    std::cout << "drvfamic Input -Options\n\n";
+    std::cout << "famidrvc Input -Options\n\n";
     std::cout << "  -o\tOutput filename\n";
     std::cout << "  -n\tOutput nes file\n";
     std::cout << "  -r\tOutput raw data\n";
@@ -20,7 +20,7 @@ int wmain(int argc, wchar_t* argv[])
     bool nes = false;
 
     std::wcout.imbue(std::locale("Japanese"));
-    std::wcout << "DrvFAMI MML Compiler v0.3.0  (c) theta 2024-2025" << std::endl;
+    std::wcout << "FamiDriver CLI Compiler v0.3.1  (c) theta 2024-2025" << std::endl;
     std::wcout << std::endl;
 
     if (argc < 2)

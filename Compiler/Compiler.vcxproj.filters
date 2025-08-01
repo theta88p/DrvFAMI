@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DrvFAMICompiler.cpp">
+    <ClCompile Include="Compiler.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="MMLReader.cpp">
@@ -72,10 +72,5 @@
   <ItemGroup>
     <Text Include="..\Readme.txt" />
     <Text Include="..\説明書.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="drvfamic.rc">
-      <Filter>リソース ファイル</Filter>
-    </ResourceCompile>
   </ItemGroup>
 </Project>

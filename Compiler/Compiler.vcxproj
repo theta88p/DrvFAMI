@@ -22,9 +22,9 @@
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{98317af0-3eaa-4863-8a8b-4377b2849c34}</ProjectGuid>
-    <RootNamespace>DrvFAMICompiler</RootNamespace>
+    <RootNamespace>Compiler</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>drvfamic</ProjectName>
+    <ProjectName>famidrvc</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -146,7 +146,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DrvFAMICompiler.cpp" />
+    <ClCompile Include="Compiler.cpp" />
     <ClCompile Include="FileWriter.cpp" />
     <ClCompile Include="MMLReader.cpp" />
     <ClCompile Include="NoteMap.cpp" />
@@ -169,9 +169,6 @@
   <ItemGroup>
     <Text Include="..\Readme.txt" />
     <Text Include="..\説明書.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="drvfamic.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
