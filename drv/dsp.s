@@ -27,16 +27,17 @@
 
 .zeropage
 
+sync:		.byte	1
+DspWork:	.res	4
+
+.bss
+
 __c:		.byte	$30
 __cc:		.byte	$30
 __s:		.byte	$30
 __ss:		.byte	$30
 __m:		.byte	$30
 __mm:		.byte	$30
-sync:		.byte	1
-DspWork:	.res	4
-
-.bss
 
 POctave:		.res	3
 PNote:			.res	3
