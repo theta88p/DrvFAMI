@@ -1963,52 +1963,57 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	start:
 		lda Device, x
 		cmp #$ff
-		beq next					;未使用トラックは処理しない
-		cmp PrevDev					;前の音源と違う場合無条件で書き込む
+		beq next			;未使用トラックは処理しない
+		cmp PrevDev			;前の音源と違う場合無条件で書き込む
 		bne exec
 		lda Frags, x
-		and #FRAG_END | FRAG_SIL	;同じ場合、発音していれば書き込む
-		beq exec
+		and #FRAG_END		;同じ場合、発音していれば書き込む
+		bne next
+		lda Volume, x
+		bne exec
+	next:
 		lda Device, x
 		sta PrevDev
-		jmp writereg_end
-	next:
 		dex
-		bpl start		;xがマイナスになったら全トラック終了
+		bpl start			;xがマイナスになったら全トラック終了
 		rts
 	exec:
 		stx ProcTr
 		lda Device, x
 		sta PrevDev
-		cmp #dev_table_end - dev_table
-		bcs next
-		asl						; *2 for word table
-		tay
-		lda dev_table + 1, y
-		pha
-		lda dev_table, y
-		pha
-		rts						; ジャンプ実行
 
 	int_sqr1:
+		cmp #DEV_2A03_SQR1
+		bne int_sqr2
 		ldy #0
 		jmp writesqr
 
 	int_sqr2:
+		cmp #DEV_2A03_SQR2
+		bne int_tri
 		ldy #4
 		jmp writesqr
 
 	int_tri:
+		cmp #DEV_2A03_TRI
+		bne int_noise
 		lda Freq_L, x
 		sta $400a
 		lda Freq_H, x
 		sta $400b
-		lda #%10000000
-		ora Volume, x
+		lda Volume, x
+		beq @stop
+		lda #$ff
+		jmp @write
+	@stop:
+		lda #$80
+	@write:
 		sta $4008
 		jmp writereg_end
 
 	int_noise:
+		cmp #DEV_2A03_NOISE
+		bne int_dpcm
 		lda HEnvReg, x
 		and #%00010000		;ハードウェアエンベロープが有効なら以下を実行
 		bne @softenv
@@ -2042,6 +2047,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		jmp writereg_end
 
 	int_dpcm:
+		cmp #DEV_2A03_DPCM
+		bne ext
 		lda Frags, x
 		and #FRAG_KEYON | FRAG_KEYOFF	;キーオンもキーオフもたっていなければ終了
 		beq @end
@@ -2065,93 +2072,72 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	@end:
 		jmp writereg_end
 
-	unknown:
-		jmp writereg_end
-
+	ext:
 .ifdef VRC6
 	vrc6_sqr1:
+		cmp #DEV_VRC6_SQR1
+		bne vrc6_sqr2
 		ldy #$90
 		jmp write_vrc6
 
 	vrc6_sqr2:
+		cmp #DEV_VRC6_SQR2
+		bne vrc6_saw
 		ldy #$a0
 		jmp write_vrc6
 
 	vrc6_saw:
+		cmp #DEV_VRC6_SAW
+		bne vrc6_end
 		ldy #$b0
 		jmp write_vrc6
+	vrc6_end:
 .endif
 
 .ifdef MMC5
 	mmc5_sqr1:
+		cmp #DEV_MMC5_SQR1
+		bne mmc5_sqr2
 		ldy #0
 		jmp write_mmc5
 
 	mmc5_sqr2:
+		cmp #DEV_MMC5_SQR2
+		bne mmc5_end
 		ldy #4
 		jmp write_mmc5
+	mmc5_end:
 .endif
 
 .ifdef SS5B
 	ss5b_sqr1:
+		cmp #DEV_SS5B_SQR1
+		bne ss5b_sqr2
 		ldy #0
 		jmp write_ss5b
 
 	ss5b_sqr2:
+		cmp #DEV_SS5B_SQR2
+		bne ss5b_sqr3
 		ldy #1
 		jmp write_ss5b
 
 	ss5b_sqr3:
+		cmp #DEV_SS5B_SQR3
+		bne ss5b_end
 		ldy #2
 		jmp write_ss5b
+	ss5b_end:
 .endif
 
 .ifdef FDS
 	fds:
+		cmp #DEV_FDS
+		bne fds_end
 		jmp write_fds
+	fds_end:
 .endif
-
-	dev_table:
-		.word int_sqr1 - 1
-		.word int_sqr2 - 1
-		.word int_tri - 1
-		.word int_noise - 1
-		.word int_dpcm - 1
-.ifdef VRC6
-		.word vrc6_sqr1 - 1
-		.word vrc6_sqr2 - 1
-		.word vrc6_saw - 1
-.else
-		.word unknown - 1
-		.word unknown - 1
-		.word unknown - 1
-.endif
-
-.ifdef MMC5
-		.word mmc5_sqr1 - 1
-		.word mmc5_sqr2 - 1
-.else
-		.word unknown - 1
-		.word unknown - 1
-.endif
-
-.ifdef SS5B
-		.word ss5b_sqr1 - 1
-		.word ss5b_sqr2 - 1
-		.word ss5b_sqr3 - 1
-.else
-		.word unknown - 1
-		.word unknown - 1
-		.word unknown - 1
-.endif
-
-.ifdef FDS
-		.word fds - 1
-.else
-		.word unknown - 1
-.endif
-	dev_table_end:
-
+		jmp writereg_end
 .endproc
 
 
