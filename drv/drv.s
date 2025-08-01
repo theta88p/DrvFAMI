@@ -20,8 +20,6 @@
 
 Frags:			.res	MAX_TRACK	;通常のフラグ
 EnvFrags:		.res	MAX_TRACK	;エンベロープのフラグ
-LenCtr:			.res	MAX_TRACK	;音長カウンタ
-GateCtr:		.res	MAX_TRACK	;ゲートカウンター
 Work:			.res	7
 
 ;-----------------------------------------------------------------------
@@ -32,6 +30,8 @@ Work:			.res	7
 Device:			.res	MAX_TRACK	;トラックで使用している音源
 Ptr_L:			.res	MAX_TRACK	;再生箇所のアドレスL
 Ptr_H:			.res	MAX_TRACK	;再生箇所のアドレスH
+LenCtr:			.res	MAX_TRACK	;音長カウンタ
+GateCtr:		.res	MAX_TRACK	;ゲートカウンター
 Octave:			.res	MAX_TRACK	;オクターブ
 NoteN:			.res	MAX_TRACK	;ノートナンバー
 DefLen:			.res	MAX_TRACK	;デフォルト音長
