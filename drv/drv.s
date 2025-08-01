@@ -94,6 +94,7 @@ ProcTr:			.res	1	;処理中のトラック
 SeqAddr_L:		.res	1	;シーケンス情報のアドレスL
 SeqAddr_H:		.res	1	;シーケンス情報のアドレスH
 PrevDev:		.res	1	;前回の音源（レジスタ書き込み用）
+LastTrack:		.res	1	;使用する最大トラック数 - 1
 
 .ifdef SS5B
 SS5BTone:		.res	3
@@ -166,7 +167,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda DrvFrags
 		ora #DRV_IS_PROC
 		sta DrvFrags
-		ldx #LAST_TRACK
+		ldx LastTrack
 		jsr pretrack	;トラック処理の前に毎フレームやる処理をここでやる
 		lda DrvFrags
 		and #DRV_SKIP_DIR
@@ -176,7 +177,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		adc SpdFreq
 		sta SpdCtr
 		bcs env			;SpdFreqを足していって桁上がりしたらスキップ
-		ldx #LAST_TRACK
+		ldx LastTrack
 		jsr track		;トラック処理
 		jmp env
 	acc:				;加速の場合
@@ -185,20 +186,20 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		adc SpdFreq
 		sta SpdCtr
 		bcc single		;桁上がりしたら二重処理
-		ldx #LAST_TRACK
+		ldx LastTrack
 		jsr track		;トラック処理
-		ldx #LAST_TRACK
+		ldx LastTrack
 		jsr envelope
-		ldx #LAST_TRACK
+		ldx LastTrack
 		jsr pretrack
 		lda DrvFrags
 		ora #DRV_DOUBLE
 		sta DrvFrags
 	single:
-		ldx #LAST_TRACK
+		ldx LastTrack
 		jsr track		;トラック処理
 	env:				;エンベロープと書き込み処理は毎フレームやる
-		ldx #LAST_TRACK
+		ldx LastTrack
 		jsr envelope
 		lda DrvFrags
 		and #DRV_DOUBLE_CLR & DRV_IS_PROC_CLR
@@ -1502,10 +1503,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 	next:
 		dex
 		bpl start			;xがマイナスになったら全トラック終了
-
-		lda #$ff
-		sta Work		;発音トラックがあるか判定する変数をリセット
-		ldx #LAST_TRACK
+		ldx LastTrack
 		jmp writereg		;割り込み処理に移行
 .endproc
 
