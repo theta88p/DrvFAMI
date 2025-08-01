@@ -271,11 +271,10 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta EnvFrags, x
 		sta Tone, x
 		sta RefTone, x
+		sta Frags, x
 		lda #1
 		sta LenCtr, x
 		sta GateCtr, x
-		lda #FRAG_SIL
-		sta Frags, x
 		lda #FRAG_ENV_DIS
 		sta EnvFrags, x
 		lda #24
