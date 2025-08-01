@@ -315,12 +315,7 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta Work
 		ldx #0			;ここからポインタ初期化
 		ldy #0
-		;lda (Work), y
-		;sta Work + 2	;最大トラック数
-		;iny
 	loop:
-		;cpx Work + 2	;最大トラック番号以降は未使用トラック
-		;bcs nouse
 		lda #$ff
 		cmp (Work), y	;トラック番号を比較
 		beq nouse		;$ffならこれ以降は未使用
