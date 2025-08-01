@@ -1435,63 +1435,56 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		lda Device, x
 		cmp #$ff
 		beq next			;未使用トラックは処理しない
-
 		stx ProcTr
 		lda EnvFrags, x
 		and #FRAG_ENV_DIS	;エンベロープ無効フラグが立っていたら音量処理へ
 		bne vol
 	@N0:
 		lda EnvFrags, x
-		and #FRAG_VENV
+		and #FRAG_NENV
 		beq @N1
-		jsr volenv
+		jsr noteenv
 	@N1:
 		lda EnvFrags, x
-		and #FRAG_NENV
+		and #FRAG_SSWP
 		beq @N2
-		jsr noteenv
+		jsr ssweep
 	@N2:
 		lda EnvFrags, x
-		and #FRAG_SSWP
+		and #FRAG_FENV
 		beq @N3
-		jsr ssweep
+		jsr freqenv
 	@N3:
 		lda EnvFrags, x
-		and #FRAG_FENV
+		and #FRAG_TENV
 		beq @N4
-		jsr freqenv
+		jsr toneenv
 	@N4:
 		lda EnvFrags, x
-		and #FRAG_TENV
-		beq @N5
-		jsr toneenv
-	@N5:
-		lda EnvFrags, x
 		and #FRAG_VENV
-		beq vol				;音量エンベロープ無効なら音量処理へ
-		jmp next			;そうでなければ次のトラックへ
+		beq vol
+		jsr volenv
+		jsr calc_volume
+		jmp next
 	vol:
 		lda Frags, x
-		and #FRAG_KEYON		;キーオンされていたら音量をトラック音量にする
-		bne trv
-		lda Frags, x
-		and #FRAG_KEYOFF	;キーオフされていたら無音に
-		beq next
+		and #FRAG_IS_KEYON	;キーオフされていたら無音に
+		beq ld0				;それ以外は最大値をロード
+		lda Device, x
+		cmp #DEV_VRC6_SAW
+		beq ld63
+		cmp #DEV_FDS
+		beq ld63
+		lda #15
+		jmp calc
+	ld0:
 		lda #0
+		jmp calc
+	ld63:
+		lda #63
+	calc:
 		sta Volume, x
-		jmp sil
-	trv:
-		lda TrVolume, x
-		sta Volume, x
-		beq sil
-		lda Frags, x		;音量が0でなければ無音フラグを降ろす
-		and #FRAG_SIL_CLR
-		sta Frags, x
-		bne next
-	sil:
-		lda Frags, x		;音量が0なら無音フラグを立てる
-		ora #FRAG_SIL
-		sta Frags, x
+		jsr calc_volume
 	next:
 		dex
 		bpl start			;xがマイナスになったら全トラック終了
@@ -1638,19 +1631,52 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		iny
 		lda (Work), y	;アドレスにあるデータを取得（フレーム数）
 		sta VEnvCtr, x		;カウンタに代入
-		beq @S				;カウンタが0ならエンベロープ位置を移動しない
+		beq ret			;カウンタが0ならエンベロープ位置を移動しない
 		inc VEnvPos, x		;エンベロープ位置移動
-	@S:
+		rts
+	end:
+		dec VEnvCtr, x
+	ret:
+		rts
+.endproc
+
+
+;音量計算
+.proc calc_volume
+		lda TrVolume, x
+		beq store		;トラックボリュームが0ならボリュームを0にして終了
+		cmp #15			;15（最大）ならそのまま終了
+		beq end
+		sta Work + 2
 		lda Volume, x
-		beq frag			;0ならこれ以降処理しない
-		ldy TrVolume, x		;トラックボリュームを掛ける
-		bne @N				;0なら処理しない
-		tya
+		beq end			;ボリュームが0ならそのまま終了
+		cmp #16
+		bcs mult		;16以上は乗算
+						;15以下はテーブルから引く
+		asl
+		asl
+		asl
+		asl
+		ora Work + 2
+		lsr
+		tay
+		lda Work + 2
+		and #1
+		beq even
+		lda Vol_Tbl, y
+		and #$0f
 		sta Volume, x
-		jmp frag
-	@N:
-		cpy #15				;15（最大）なら処理しない
-		beq @E
+		rts
+	even:
+		lda Vol_Tbl, y
+		lsr
+		lsr
+		lsr
+		lsr
+		sta Volume, x
+		rts
+	mult:
+		ldy TrVolume, x
 		iny					;16で割る都合上1を足す
 		jsr mult			;a * y
 		lsr Work + 3		;16で割る
@@ -1661,25 +1687,13 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		ror Work + 2
 		lda Work + 2
 		cmp #1				;3bit右シフトした時点で1の場合そのまま終了（四捨五入）
-		beq @E
+		beq store
 		lsr Work + 3
 		ror Work + 2
 		lda Work + 2
-		beq frag			;0なら無音フラグを立てる
-	@E:
+	store:
 		sta Volume, x
-		lda Frags, x		;無音フラグを降ろす
-		and #FRAG_SIL_CLR
-		sta Frags, x
-		bne ret
-	frag:
-		lda Frags, x
-		ora #FRAG_SIL		;無音フラグを立てる
-		sta Frags, x
-		jmp ret
 	end:
-		dec VEnvCtr, x
-	ret:
 		rts
 .endproc
 
@@ -2556,6 +2570,43 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 
 
 .rodata
+
+Vol_Tbl:
+	;.byte $0, $0, $0, $0, $0, $0, $0, $0, $0, $0, $0, $0, $0, $0, $0, $0
+	;.byte $0, $0, $0, $0, $0, $0, $0, $1, $1, $1, $1, $1, $1, $1, $1, $1
+	;.byte $0, $0, $0, $0, $1, $1, $1, $1, $1, $1, $1, $1, $1, $1, $1, $2
+ 	;.byte $0, $0, $0, $1, $1, $1, $1, $1, $1, $1, $2, $2, $2, $2, $2, $3
+ 	;.byte $0, $0, $1, $1, $1, $1, $1, $1, $2, $2, $2, $2, $3, $3, $3, $4
+ 	;.byte $0, $0, $1, $1, $1, $1, $2, $2, $2, $3, $3, $3, $4, $4, $4, $5
+ 	;.byte $0, $0, $1, $1, $1, $2, $2, $2, $3, $3, $4, $4, $4, $5, $5, $6
+ 	;.byte $0, $1, $1, $1, $1, $2, $2, $3, $3, $4, $4, $5, $5, $6, $6, $7
+ 	;.byte $0, $1, $1, $1, $2, $2, $3, $3, $4, $4, $5, $5, $6, $6, $7, $8
+ 	;.byte $0, $1, $1, $1, $2, $3, $3, $4, $4, $5, $6, $6, $7, $7, $8, $9
+ 	;.byte $0, $1, $1, $2, $2, $3, $4, $4, $5, $6, $6, $7, $8, $8, $9, $a
+ 	;.byte $0, $1, $1, $2, $2, $3, $4, $5, $5, $6, $7, $8, $8, $9, $a, $b
+ 	;.byte $0, $1, $1, $2, $3, $4, $4, $5, $6, $7, $8, $8, $9, $a, $b, $c
+ 	;.byte $0, $1, $1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $a, $b, $c, $d
+ 	;.byte $0, $1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $a, $b, $c, $d, $e
+ 	;.byte $0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $a, $b, $c, $d, $e, $f
+
+	.byte	$00, $00, $00, $00, $00, $00, $00, $00
+	.byte	$00, $00, $00, $01, $11, $11, $11, $11
+	.byte	$00, $00, $11, $11, $11, $11, $11, $12
+ 	.byte	$00, $01, $11, $11, $11, $22, $22, $23
+ 	.byte	$00, $11, $11, $11, $22, $22, $33, $34
+ 	.byte	$00, $11, $11, $22, $23, $33, $44, $45
+ 	.byte	$00, $11, $12, $22, $33, $44, $45, $56
+ 	.byte	$01, $11, $12, $23, $34, $45, $56, $67
+ 	.byte	$01, $11, $22, $33, $44, $55, $66, $78
+ 	.byte	$01, $11, $23, $34, $45, $66, $77, $89
+ 	.byte	$01, $12, $23, $44, $56, $67, $88, $9a
+ 	.byte	$01, $12, $23, $45, $56, $78, $89, $ab
+ 	.byte	$01, $12, $34, $45, $67, $88, $9a, $bc
+ 	.byte	$01, $12, $34, $56, $67, $89, $ab, $cd
+ 	.byte	$01, $12, $34, $56, $78, $9a, $bc, $de
+ 	;.byte	$01, $23, $45, $67, $89, $ab, $cd, $ef
+
+
 Freq_Tbl:
 	.word	$1a7f
 	.word	$18ff
