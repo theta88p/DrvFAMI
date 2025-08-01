@@ -332,30 +332,31 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		adc SeqAddr_H
 		sta Ptr_H, x
 		jsr track_init	;トラック初期化
-		jmp next
+		inx
+		iny
+		cpx #MAX_TRACK
+		bcc loop
+		jmp def
 	nouse:
+		dex
+		stx LastTrack
+		inx
+	@L:
 		lda #FRAG_END
 		sta Frags, x
 		lda #$ff
 		sta Device, x	;$ffを入れて処理しないようにしておく
 		inx
 		cpx #MAX_TRACK
-		bcc loop
-		jmp def
-	next:
-		inx
-		iny
-		cpx #MAX_TRACK
-		bcc loop
+		bcc @L
 	def:
 		iny				;トラック終端を飛ばす
-		ldx #0
+		ldx LastTrack
 	@L:
 		lda (Work), y
 		sta DefLen, x	;デフォルト音長を保存
-		inx
-		cpx #MAX_TRACK
-		bcc @L
+		dex
+		bpl @L
 .ifdef FDS
 		iny
 		lda (Work), y
