@@ -2,6 +2,7 @@
 .export		NMI_main
 
 .importzp	sync
+.import		DrvFrags
 .import		drv_main
 .import		dsp_main
 .import		dsp_write
@@ -11,6 +12,8 @@
 .import		__ss
 .import		__m
 .import		__mm
+
+.include	"drv.inc"
 
 .segment	"LOWCODE"
 
@@ -29,6 +32,10 @@
 ; Call sound driver main routine
 ;---------------------------------------
 
+	lda DrvFrags
+	and #DRV_INIT | DRV_IS_PROC
+	beq Count
+
 	lda #0
 	sta sync
 	
@@ -46,7 +53,6 @@
 	
 	lda #1
 	sta sync
-	
 	
 ;---------------------------------------
 ; Count-up

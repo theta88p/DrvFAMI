@@ -252,6 +252,8 @@ FdsModFreq_H:	.res	1	;モジュレータの周波数H＋上位1bitに同期フ�
 		sta DrvFrags
 		lda #$ff
 		sta PrevDev
+		lda #DRV_INIT
+		sta DrvFrags
 		rts
 .endproc
 
