@@ -1,5 +1,5 @@
-# DrvFAMI
-This is a sound driver that can be played on a Famicom/NES or emulator. Please read it as "Dora Fami". This type writes MML and converts it with a compiler.
+# FamiDriverCLI
+This is a sound driver that can be played on a Famicom/NES or emulator. This type writes MML and converts it with a compiler.
 ## Features
 * You can use four types of envelopes: volume, pitch, note, and tone + software sweep.
 * You can interrupt the sound and play another sound.
